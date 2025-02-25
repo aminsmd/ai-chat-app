@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Rooms</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: var(--text-primary);
+            margin-bottom: 2rem;
+            font-weight: 600;
+            font-size: 1.75rem;
+        }
+
+        h2 {
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .rooms-list {
+            margin-bottom: 3rem;
+        }
+
+        .room-card {
+            padding: 1.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .room-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+        }
+
+        .room-info {
+            flex-grow: 1;
+        }
+
+        .room-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 1.125rem;
+        }
+
+        .room-participants {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .join-form {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .create-room {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        input[type="text"] {
+            padding: 0.75rem 1rem;
+            font-size: 0.9375rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 200px;
+            font-family: inherit;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9375rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.15s ease;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .no-rooms {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 3rem 2rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+        }
+
+        .api-docs-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.3s;
+        }
+
+        .api-docs-button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat Rooms</h1>
+        
+        <div class="rooms-list">
+            {% if rooms %}
+                {% for room_id, room_info in rooms.items() %}
+                    <div class="room-card">
+                        <div class="room-info">
+                            <div class="room-name">{{ room_info.name }}</div>
+                            <div class="room-participants">
+                                {{ room_info.participants|length }} participant(s)
+                            </div>
+                        </div>
+                        <form class="join-form" action="{{ url_for('join') }}" method="POST">
+                            <input type="hidden" name="room_id" value="{{ room_id }}">
+                            <input type="text" name="name" placeholder="Your name" required>
+                            <button type="submit">Join Room</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-rooms">
+                    No active chat rooms. Create one below!
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="create-room">
+            <h2>Create New Room</h2>
+            <form action="{{ url_for('create_room') }}" method="POST">
+                <div class="form-group">
+                    <input type="text" name="room_name" placeholder="Room name" required>
+                    <input type="text" name="name" placeholder="Your name" required>
+                    <button type="submit">Create Room</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <a href="/api/docs" target="_blank" class="api-docs-button">API Docs</a>
+</body>
+</html> 

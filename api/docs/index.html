@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Room API Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #353740;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .endpoint {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .post { background: #E8F5FF; color: #0066CC; }
+        .get { background: #E7F7EC; color: #0A7227; }
+
+        .path {
+            font-family: monospace;
+            font-size: 16px;
+            color: #353740;
+        }
+
+        .description {
+            margin: 15px 0;
+            color: #666;
+        }
+
+        .parameters {
+            margin: 20px 0;
+        }
+
+        .parameter {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f7f7f8;
+            border-radius: 4px;
+        }
+
+        .required {
+            color: #d63939;
+            font-size: 14px;
+        }
+
+        .response {
+            margin: 20px 0;
+        }
+
+        pre {
+            background: #f7f7f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'SF Mono', Consolas, Monaco, monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat Room API Reference</h1>
+    
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="path">/api/rooms/</span>
+        <div class="description">Creates a new chat room.</div>
+        
+        <div class="parameters">
+            <h3>Request Body</h3>
+            <div class="parameter">
+                <code>task</code> <span class="required">required</span>
+                <div>Object containing task details:</div>
+                <pre><code>{
+  "title": "string",
+  "description": "string",
+  "objectives": ["string"],
+  "deadline": "string (ISO 8601)"
+}</code></pre>
+            </div>
+            <div class="parameter">
+                <code>personality</code> <span class="required">required</span>
+                <div>Object containing AI personality settings:</div>
+                <pre><code>{
+  "name": "string",
+  "description": "string",
+  "traits": {
+    "emotional_stability": {"level": 0.8, "description": "string"},
+    "extraversion": {"level": 0.7, "description": "string"},
+    ...
+  },
+  "communication_style": {
+    "formality": 0.7,
+    "directness": 0.8,
+    ...
+  }
+}</code></pre>
+            </div>
+            <div class="parameter">
+                <code>participants</code> <span class="required">required</span>
+                <div>Array of participant objects:</div>
+                <pre><code>[{
+  "user_id": "string",
+  "name": "string",
+  "role": "string",
+  "is_ai": boolean
+}]</code></pre>
+            </div>
+        </div>
+
+        <div class="response">
+            <h3>Response</h3>
+            <pre><code>{
+  "room_id": "string",
+  "task": object,
+  "personality": object,
+  "participants": array,
+  "created_at": "string (ISO 8601)",
+  "status": "string",
+  "join_url": "string"
+}</code></pre>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/api/rooms/{room_id}</span>
+        <div class="description">Retrieves details of a specific chat room.</div>
+        
+        <div class="parameters">
+            <h3>Path Parameters</h3>
+            <div class="parameter">
+                <code>room_id</code> <span class="required">required</span>
+                <div>The unique identifier of the chat room.</div>
+            </div>
+        </div>
+
+        <div class="response">
+            <h3>Response</h3>
+            <pre><code>{
+  "room_id": "string",
+  "task": object,
+  "personality": object,
+  "participants": array,
+  "created_at": "string",
+  "status": "string",
+  "join_url": "string"
+}</code></pre>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/api/rooms/list</span>
+        <div class="description">Lists all chat rooms or rooms for a specific user.</div>
+        
+        <div class="parameters">
+            <h3>Query Parameters</h3>
+            <div class="parameter">
+                <code>user_id</code> <span>optional</span>
+                <div>Filter rooms by user ID. If not provided, returns all rooms.</div>
+            </div>
+        </div>
+
+        <div class="response">
+            <h3>Response</h3>
+            <pre><code>[{
+  "room_id": "string",
+  "task": object,
+  "personality": object,
+  "participants": array,
+  "created_at": "string",
+  "status": "string",
+  "join_url": "string"
+}]</code></pre>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="path">/api/rooms/{room_id}/messages</span>
+        <div class="description">Sends a message to a chat room.</div>
+        
+        <div class="parameters">
+            <h3>Path Parameters</h3>
+            <div class="parameter">
+                <code>room_id</code> <span class="required">required</span>
+                <div>The unique identifier of the chat room.</div>
+            </div>
+
+            <h3>Request Body</h3>
+            <div class="parameter">
+                <pre><code>{
+  "user_id": "string",
+  "content": "string",
+  "type": "string",
+  "role": "string" // optional
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="response">
+            <h3>Response</h3>
+            <pre><code>{
+  "user_id": "string",
+  "channel_name": "string",
+  "content": "string",
+  "ts": number,
+  "role": "string",
+  "type": "string"
+}</code></pre>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/api/rooms/{room_id}/messages</span>
+        <div class="description">Retrieves all messages from a chat room.</div>
+        
+        <div class="parameters">
+            <h3>Path Parameters</h3>
+            <div class="parameter">
+                <code>room_id</code> <span class="required">required</span>
+                <div>The unique identifier of the chat room.</div>
+            </div>
+        </div>
+
+        <div class="response">
+            <h3>Response</h3>
+            <pre><code>[{
+  "user_id": "string",
+  "channel_name": "string",
+  "content": "string",
+  "ts": number,
+  "role": "string",
+  "type": "string"
+}]</code></pre>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/chat/{room_id}</span>
+        <div class="description">Joins a chat room via web interface.</div>
+        
+        <div class="parameters">
+            <h3>Path Parameters</h3>
+            <div class="parameter">
+                <code>room_id</code> <span class="required">required</span>
+                <div>The unique identifier of the chat room.</div>
+            </div>
+        </div>
+
+        <div class="response">
+            <h3>Response</h3>
+            <div>Returns HTML page for chat interface</div>
+        </div>
+    </div>
+</body>
+</html> 

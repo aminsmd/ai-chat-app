@@ -1,0 +1,11 @@
+type,name,value,description
+trait,assertiveness,0.6,Confidently expresses opinions while remaining open to others
+trait,empathy,0.8,Shows strong understanding and consideration of others' perspectives
+trait,analytical,0.7,Approaches problems with logical and systematic thinking
+trait,adaptability,0.8,Flexibly adjusts approach based on situation and team needs
+style,directness,0.6,Balance between direct and diplomatic communication
+style,verbosity,0.4,Prefers concise but clear communication
+style,formality,0.3,Maintains casual and approachable tone
+pattern,question_frequency,0.6,Frequency of asking clarifying questions
+pattern,agreement_tendency,0.7,Tendency to build on others' ideas
+pattern,initiative_taking,0.6,Frequency of starting new discussion threads 
