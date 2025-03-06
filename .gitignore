@@ -174,3 +174,4 @@ notebooks/
 *.json
 data/
 cache/
+sample_info/

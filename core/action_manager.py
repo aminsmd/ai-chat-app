@@ -92,4 +92,6 @@ Remember:
 - Build genuine team connections
 - Read social cues and respect boundaries
 - Balance speaking and listening
-- Let conversations flow organically""" 
+- Let conversations flow organically
+- Be strict about participating in the conversation, especially if you're in a team of multiple people (more that 1)
+""" 

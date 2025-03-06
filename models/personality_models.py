@@ -32,29 +32,24 @@ class Personality:
     name: str
     description: str
     traits: Dict = field(default_factory=dict)
-    communication_style: Dict = field(default_factory=dict)
+    communication_style: str = "standard"
     response_characteristics: Dict = field(default_factory=dict)
 
     def get_prompt_modifiers(self) -> str:
         """Generate personality-specific prompt modifiers"""
         modifiers = []
         
-        # Add trait modifiers
-        for trait, info in self.traits.items():
-            if info['level'] > 0.7:
-                modifiers.append(f"- {info['description']}")
-        
-        # Add communication style modifiers
-        if self.communication_style.get('formality', 0) > 0.7:
-            modifiers.append("- Engage in professional and clear communication")
-        if self.communication_style.get('directness', 0) > 0.7:
-            modifiers.append("- Share thoughts directly and concisely")
-        if self.communication_style.get('enthusiasm', 0) > 0.7:
-            modifiers.append("- Express genuine interest in team discussions")
-        if self.communication_style.get('respect', 0) > 0.7:
-            modifiers.append("- Show respect for all team members' perspectives")
-        if self.communication_style.get('humor', 0) > 0.7:
-            modifiers.append("- Share appropriate light moments with the team")
+        # Add trait modifiers based on subcomponents
+        for trait_name, subcomponents in self.traits.items():
+            for subcomponent, level in subcomponents.items():
+                if level == 'high':
+                    modifiers.append(f"- High {trait_name.replace('_', ' ')} ({subcomponent.replace('_', ' ')})")
+                elif level == 'low':
+                    modifiers.append(f"- Low {trait_name.replace('_', ' ')} ({subcomponent.replace('_', ' ')})")
+
+        # Add communication style as a simple note if not standard
+        if self.communication_style and self.communication_style != "standard":
+            modifiers.append(f"- Use {self.communication_style} communication style")
             
         return "\n".join([
             f"As {self.name}: {self.description}",

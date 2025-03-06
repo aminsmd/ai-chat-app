@@ -80,42 +80,12 @@ def personality_to_behavior(personality_dict: Dict) -> Dict:
                 "medium": "Set clear objectives, encourage goal pursuit.",
                 "high": "Drive team toward excellence, offering constructive feedback."
             }
-        },
-        "proactivity": {
-            "level": {
-                "low": "Wait for explicit instructions before taking action.",
-                "medium": "Take initiative when situation clearly calls for it.",
-                "high": "Anticipate needs and take preemptive action to address them."
-            }
         }
     }
 
-    behaviors = {}
-    
-    # Map numeric values to low/medium/high
-    def get_level(value: float) -> str:
-        if value <= 0.4:
-            return "low"
-        elif value <= 0.7:
-            return "medium"
-        else:
-            return "high"
-    
-    # Process each trait category
-    for category, traits in personality_dict.items():
-        if isinstance(traits, dict):
-            behaviors[category] = {}
-            for trait_name, value in traits.items():
-                # Skip UI-specific fields
-                if trait_name in ["level", "description"]:
-                    continue
-                    
-                if trait_name in behavior_map[category]:
-                    # Convert the 0-1 value to a level
-                    level = get_level(value)
-                    behaviors[category][trait_name] = behavior_map[category][trait_name][level]
-    
-    return behaviors
+    # We'll simply return a copy of the full behavior map since the UI
+    # expects the full structure with all levels for each subcomponent
+    return behavior_map
 
 def generate_name_and_summary(personality_dict: Dict, behaviors: Dict) -> Dict:
     """Generate a name and summary using GPT-4"""
@@ -185,30 +155,48 @@ def convert_trait_value(value: Union[str, int, float]) -> float:
     return 0.5  # Default value
 
 def standardize_traits(traits_dict: Dict) -> Dict:
-    """Standardize trait dictionary to use 0-1 scale with level and description"""
+    """Standardize trait dictionary to use categorical levels for subcomponents"""
     standardized = {}
     
-    for trait_name, trait_data in traits_dict.items():
+    # Base trait templates with their subcomponents
+    trait_templates = {
+        "emotional_stability": ["adjustment", "self_esteem"],
+        "extraversion": ["dominance", "affiliation", "social_perceptiveness", "expressivity"],
+        "openness": ["flexibility"],
+        "agreeableness": ["trust", "cooperation"],
+        "conscientiousness": ["dependability", "achievement"]
+    }
+    
+    # Process each main trait
+    for trait_name, subcomponents in trait_templates.items():
+        if trait_name not in standardized:
+            standardized[trait_name] = {}
+        
+        trait_data = traits_dict.get(trait_name, {})
+        
+        # Handle the case where trait_data is a dict with subcomponents
         if isinstance(trait_data, dict):
-            if 'level' in trait_data:
-                # Already in the new format
-                standardized[trait_name] = {
-                    'level': convert_trait_value(trait_data['level']),
-                    'description': trait_data.get('description', '')
-                }
+            # Process each subcomponent
+            for subcomponent in subcomponents:
+                # Check if the subcomponent exists in the input data
+                if subcomponent in trait_data:
+                    # Get the subcomponent value
+                    subcomp_value = trait_data[subcomponent]
+                    if isinstance(subcomp_value, dict) and "level_category" in subcomp_value:
+                        level_category = subcomp_value["level_category"]
+                    elif isinstance(subcomp_value, str) and subcomp_value in ["low", "medium", "high"]:
+                        level_category = subcomp_value
+                    else:
+                        level_category = "medium"  # Default
+                    
+                    standardized[trait_name][subcomponent] = level_category
             else:
-                # Old format with sub-traits
-                avg_value = sum(convert_trait_value(v) for v in trait_data.values()) / len(trait_data)
-                standardized[trait_name] = {
-                    'level': avg_value,
-                    'description': f"Composite of {', '.join(trait_data.keys())}"
-                }
+                    # If subcomponent is missing, default to medium
+                    standardized[trait_name][subcomponent] = "medium"
         else:
-            # Direct value
-            standardized[trait_name] = {
-                'level': convert_trait_value(trait_data),
-                'description': ''
-            }
+            # If trait is not a dict, default all subcomponents to medium
+            for subcomponent in subcomponents:
+                standardized[trait_name][subcomponent] = "medium"
     
     return standardized
 
@@ -223,133 +211,69 @@ def load_personality_from_json(name: str, file_path: str) -> Optional[Personalit
             data = json.load(f)
             
         if 'personas' not in data:
-            logger.error(f"No personas found in {file_path}")
+            logger.error(f"No 'personas' field found in {file_path}")
             return None
             
         if name not in data['personas']:
-            logger.error(f"Personality '{name}' not found in {file_path}")
+            logger.error(f"Persona '{name}' not found in {file_path}")
             return None
             
         persona_data = data['personas'][name]
         
-        # Standardize traits and communication style
+        # Apply standardization to ensure traits have the correct subcomponent structure
         traits = standardize_traits(persona_data.get('traits', {}))
-        communication_style = standardize_communication_style(persona_data.get('communication_style', {}))
+        
+        # Get response characteristics
+        response_length = persona_data.get('response_characteristics', {}).get('response_length', 'medium')
+        response_characteristics = {
+            'response_length': response_length
+        }
         
         return Personality(
-            name=persona_data.get('name', 'AI Teammate'),
-            description=persona_data.get('description', 'A helpful and professional AI teammate'),
+            name=name,
+            description=persona_data.get('description', f"AI personality: {name}"),
             traits=traits,
-            communication_style=communication_style,
-            response_characteristics=persona_data.get('response_characteristics', {})
+            communication_style={},
+            response_characteristics=response_characteristics
         )
-        
     except Exception as e:
-        logger.error(f"Error loading personality from JSON: {str(e)}")
+        logger.error(f"Error loading personality from {file_path}: {str(e)}")
         return None
 
-# Create a default personality
+# Update default_personality to set values only for subcomponents
 default_personality = Personality(
     name="AI Teammate",
-    description="A helpful and professional AI teammate focused on clear communication and effective collaboration, responding in a sentence or two to encourage more turn-taking.",
+    description="A helpful and professional AI teammate focused on clear communication and effective collaboration.",
     traits={
-        "emotional_stability": {"level": 0.8, "description": "Maintains composure and professionalism"},
-        "extraversion": {"level": 0.6, "description": "Friendly but focused on the task"},
-        "openness": {"level": 0.7, "description": "Open to new ideas and approaches"},
-        "agreeableness": {"level": 0.7, "description": "Cooperative and supportive"},
-        "conscientiousness": {"level": 0.9, "description": "Thorough and reliable"},
-        "proactivity": {"level": 0.5, "description": "Balances between reactive and proactive responses"}
+        "emotional_stability": {"adjustment": "high", "self_esteem": "high"},
+        "extraversion": {"dominance": "medium", "affiliation": "medium", "social_perceptiveness": "medium", "expressivity": "medium"},
+        "openness": {"flexibility": "medium"},
+        "agreeableness": {"trust": "high", "cooperation": "high"},
+        "conscientiousness": {"dependability": "high", "achievement": "high"}
     },
-    communication_style={
-        "formality": 0.7,
-        "directness": 0.8,
-        "enthusiasm": 0.6,
-        "respect": 0.9,
-        "humor": 0.3
-    },
-    response_characteristics={
-        "response_length": "medium",
-        "technical_level": "adaptive",
-        "empathy_level": "moderate",
-        "creativity_level": "balanced"
-    }
+    communication_style={},
+    response_characteristics={"response_length": "medium"}
 )
 
+# Update generate_random_persona to randomize subcomponents
 def generate_random_persona() -> Personality:
-    """Generate a random personality with randomized traits and communication style"""
-    # Generate random trait levels between 0.3 and 0.9
+    levels = ["low", "medium", "high"]
     traits = {
-        "emotional_stability": {
-            "adjustment": round(random.uniform(0.3, 0.9), 2),
-            "self_esteem": round(random.uniform(0.3, 0.9), 2),
-            # Computed average for UI display
-            "level": None,  # Will be computed
-            "description": "Emotional composure and self-confidence"
-        },
+        "emotional_stability": {"adjustment": random.choice(levels), "self_esteem": random.choice(levels)},
         "extraversion": {
-            "dominance": round(random.uniform(0.3, 0.9), 2),
-            "affiliation": round(random.uniform(0.3, 0.9), 2),
-            "social_perceptiveness": round(random.uniform(0.3, 0.9), 2),
-            "expressivity": round(random.uniform(0.3, 0.9), 2),
-            # Computed average for UI display
-            "level": None,  # Will be computed
-            "description": "Social engagement and interpersonal dynamics"
+            "dominance": random.choice(levels),
+            "affiliation": random.choice(levels),
+            "social_perceptiveness": random.choice(levels),
+            "expressivity": random.choice(levels)
         },
-        "openness": {
-            "flexibility": round(random.uniform(0.3, 0.9), 2),
-            # Computed average for UI display
-            "level": None,  # Will be computed
-            "description": "Adaptability and innovative thinking"
-        },
-        "agreeableness": {
-            "trust": round(random.uniform(0.3, 0.9), 2),
-            "cooperation": round(random.uniform(0.3, 0.9), 2),
-            # Computed average for UI display
-            "level": None,  # Will be computed
-            "description": "Trust and cooperative behavior"
-        },
-        "conscientiousness": {
-            "dependability": round(random.uniform(0.3, 0.9), 2),
-            "achievement": round(random.uniform(0.3, 0.9), 2),
-            # Computed average for UI display
-            "level": None,  # Will be computed
-            "description": "Reliability and goal achievement"
-        },
-        "proactivity": {
-            "level": round(random.uniform(0.3, 0.9), 2),
-            "description": "Initiative and anticipatory action"
-        }
+        "openness": {"flexibility": random.choice(levels)},
+        "agreeableness": {"trust": random.choice(levels), "cooperation": random.choice(levels)},
+        "conscientiousness": {"dependability": random.choice(levels), "achievement": random.choice(levels)}
     }
-    
-    # Compute average levels for UI display
-    for trait, values in traits.items():
-        if trait != "proactivity":  # proactivity already has a direct level
-            subtraits = {k: v for k, v in values.items() 
-                        if k not in ["level", "description"]}
-            values["level"] = round(sum(subtraits.values()) / len(subtraits), 2)
-    
-    # Generate random communication style levels
-    communication_style = {
-        "formality": round(random.uniform(0.3, 0.9), 2),
-        "directness": round(random.uniform(0.3, 0.9), 2),
-        "enthusiasm": round(random.uniform(0.3, 0.9), 2),
-        "respect": round(random.uniform(0.6, 0.9), 2),  # Keep respect relatively high
-        "humor": round(random.uniform(0.2, 0.7), 2)     # Keep humor moderate
-    }
-    
-    # List of possible response lengths and levels
+
     response_lengths = ["short", "medium", "long"]
-    levels = ["basic", "moderate", "advanced", "adaptive"]
-    
-    # Generate random response characteristics
-    response_characteristics = {
-        "response_length": random.choice(response_lengths),
-        "technical_level": random.choice(levels),
-        "empathy_level": random.choice(levels),
-        "creativity_level": random.choice(levels)
-    }
-    
-    # Generate a name and description using GPT-4
+    response_characteristics = {"response_length": random.choice(response_lengths)}
+
     traits_behavior = personality_to_behavior(traits)
     name_summary = generate_name_and_summary(traits, traits_behavior)
     
@@ -357,6 +281,161 @@ def generate_random_persona() -> Personality:
         name=name_summary["name"],
         description=name_summary["summary"],
         traits=traits,
-        communication_style=communication_style,
+        communication_style={},
         response_characteristics=response_characteristics
     )
+
+def get_personality_prompt(personality) -> str:
+    """Generate a personality prompt based on categorical trait levels"""
+    # Get behaviors from personality module
+    behaviors_dict = personality_to_behavior(personality.traits)
+    
+    # Extract behaviors into a flat list
+    behaviors = []
+    for category, traits in behaviors_dict.items():
+        for trait, behavior in traits.items():
+            behaviors.append(behavior)
+    
+    # Combine all behaviors
+    behavior_instructions = "\n".join([f"- {behavior}" for behavior in behaviors])
+    
+    # Build the final prompt
+    prompt = f"""You are {personality.name}. {personality.description}
+
+Behavioral Traits:
+{behavior_instructions}
+
+These behavioral traits define your personality. Embody these traits in your responses. Your communication style and decision-making should consistently reflect these characteristics. When responding to team members, prioritize staying true to these behavioral patterns over other considerations."""
+        
+    return prompt
+
+# Add get_prompt_modifiers method to Personality class
+def Personality_get_prompt_modifiers(self) -> str:
+    """Return personality-specific prompt modifiers for decision making"""
+    # Get behaviors from personality module
+    behaviors_dict = personality_to_behavior(self.traits)
+    
+    # Extract behaviors into a flat list
+    behaviors = []
+    for category, traits in behaviors_dict.items():
+        for trait, behavior in traits.items():
+            behaviors.append(behavior)
+    
+    # Combine all behaviors
+    behavior_instructions = "\n".join([f"- {behavior}" for behavior in behaviors])
+    
+    # Build the prompt modifiers
+    prompt = f"""You are {self.name}. {self.description}
+
+When making decisions, consider these behavioral traits:
+{behavior_instructions}"""
+    
+    return prompt
+
+# Add the method to the Personality class
+Personality.get_prompt_modifiers = Personality_get_prompt_modifiers
+
+def personality_to_dict(personality: Personality) -> Dict:
+    """Convert a Personality object to a dictionary suitable for UI and database storage"""
+    return {
+        "name": personality.name,
+        "description": personality.description,
+        "traits": personality.traits,  # Now we preserve the full subcomponent structure
+        "response_characteristics": {
+            "response_length": personality.response_characteristics.get("response_length", "medium")
+        }
+    }
+
+def dict_to_personality(data: Dict) -> Personality:
+    """Convert a dictionary from UI or database to a Personality object"""
+    # Apply standardization to ensure traits have the correct subcomponent structure
+    traits = standardize_traits(data.get("traits", {}))
+    
+    return Personality(
+        name=data.get("name", "AI Teammate"),
+        description=data.get("description", "A helpful and professional AI teammate"),
+        traits=traits,
+        communication_style={},
+        response_characteristics={
+            "response_length": data.get("response_characteristics", {}).get("response_length", "medium")
+        }
+    )
+
+def ui_data_to_personality(ui_data: Dict, existing_personality: Optional[Personality] = None) -> Personality:
+    """Convert UI form data to a Personality object"""
+    # Start with existing personality or default
+    if existing_personality:
+        name = existing_personality.name
+        description = existing_personality.description
+    else:
+        name = "AI Teammate"
+        description = "A helpful and professional AI teammate"
+    
+    # Process traits from UI data
+    # The UI data might come in a different format, with trait names like 'trait_emotional_stability',
+    # so we need to parse it carefully
+    traits = {}
+    
+    # Create a mapping of trait names to their subcomponents
+    trait_subcomponents = {
+        "emotional_stability": ["adjustment", "self_esteem"],
+        "extraversion": ["dominance", "affiliation", "social_perceptiveness", "expressivity"],
+        "openness": ["flexibility"],
+        "agreeableness": ["trust", "cooperation"],
+        "conscientiousness": ["dependability", "achievement"]
+    }
+    
+    # First, process any main traits that might be in the UI data
+    for ui_key, value in ui_data.items():
+        if ui_key.startswith('trait_'):
+            # Extract the trait name
+            trait_name = ui_key.replace('trait_', '')
+            if trait_name in trait_subcomponents:
+                # If it's a main trait, we'll give the same value to all subcomponents
+                # This is for backward compatibility
+                if trait_name not in traits:
+                    traits[trait_name] = {}
+                
+                level = value if isinstance(value, str) else "medium"
+                for subcomponent in trait_subcomponents[trait_name]:
+                    traits[trait_name][subcomponent] = level
+    
+    # Then look for specific subcomponent data
+    for ui_key, value in ui_data.items():
+        # Check for keys like 'trait_emotional_stability_adjustment'
+        for trait_name, subcomponents in trait_subcomponents.items():
+            for subcomponent in subcomponents:
+                if ui_key == f'trait_{trait_name}_{subcomponent}':
+                    if trait_name not in traits:
+                        traits[trait_name] = {}
+                    level = value if isinstance(value, str) else "medium"
+                    traits[trait_name][subcomponent] = level
+    
+    # Apply standardization to ensure all subcomponents are present with valid values
+    traits = standardize_traits(traits)
+    
+    # Get response characteristics
+    response_characteristics = {
+        "response_length": ui_data.get("response_length", "medium")
+    }
+    
+    return Personality(
+        name=name,
+        description=description,
+        traits=traits,
+        communication_style={},
+        response_characteristics=response_characteristics
+    )
+
+# Add methods to Personality class
+def Personality_from_ui_data(cls, ui_data: Dict, current_personality: Optional['Personality'] = None) -> 'Personality':
+    """Class method to create a Personality from UI data"""
+    return ui_data_to_personality(ui_data, current_personality)
+
+def Personality_to_dict(self) -> Dict:
+    """Instance method to convert Personality to a dictionary"""
+    return personality_to_dict(self)
+
+# Add the methods to the Personality class
+Personality.from_ui_data = classmethod(Personality_from_ui_data)
+Personality.to_dict = Personality_to_dict

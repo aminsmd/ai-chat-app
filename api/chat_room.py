@@ -1,11 +1,11 @@
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, WebSocket
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from pydantic import BaseModel, Field, validator
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pathlib import Path
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +17,8 @@ from models.personality_models import Personality
 from core.database_manager import DatabaseManager
 from core.memory_manager import MemoryManager
 from models.base import BotConfig, Message
+from pipelines.web_pipeline import WebPipeline
+from core.exceptions import RoomNotFoundError, DatabaseError, PipelineError
 
 # Load environment variables
 load_dotenv()
@@ -68,17 +70,64 @@ class ChatRoomResponse(BaseModel):
             datetime: lambda v: v.isoformat()
         }
 
-class ChatRoom:
+class ChatRoomManager:
+    """Handles chat room operations and state management"""
     def __init__(self, db: DatabaseManager, memory: MemoryManager):
         self.db = db
         self.memory = memory
         self.rooms: Dict[str, ChatRoomResponse] = {}
-        self.messages: Dict[str, List[Message]] = {}  # room_id -> messages
+        self.messages: Dict[str, List[Message]] = {}
+        self.pipelines: Dict[str, WebPipeline] = {}
+        self.active_connections: Dict[str, List[WebSocket]] = {}
+
+    async def create_pipeline(self, room_id: str, personality: dict) -> None:
+        """Create and store a pipeline for a room"""
+        try:
+            self.pipelines[room_id] = WebPipeline(
+                personality=personality,
+                db_manager=self.db,
+                memory_manager=self.memory
+            )
+        except Exception as e:
+            raise PipelineError(f"Failed to create pipeline: {str(e)}")
+
+    async def broadcast_message(self, room_id: str, message: dict) -> None:
+        """Broadcast message to all connected clients in a room"""
+        if room_id in self.active_connections:
+            for connection in self.active_connections[room_id]:
+                await connection.send_json(message)
+
+    async def process_user_message(self, room_id: str, message: Message) -> Optional[Message]:
+        """Process user message and get AI response"""
+        try:
+            if room_id not in self.pipelines:
+                raise PipelineError(f"No pipeline found for room {room_id}")
+
+            pipeline = self.pipelines[room_id]
+            response = await pipeline.process_message(message)
+            
+            if response:
+                return Message(
+                    user_id="ai1",
+                    channel_name=room_id,
+                    content=response,
+                    ts=datetime.utcnow().timestamp(),
+                    role="assistant",
+                    type="message"
+                )
+            return None
+        except Exception as e:
+            raise PipelineError(f"Failed to process message: {str(e)}")
+
+class RoomController:
+    """Handles room-related API endpoints"""
+    def __init__(self, manager: ChatRoomManager):
+        self.manager = manager
 
     async def create_room(self, room_data: ChatRoomCreate) -> ChatRoomResponse:
+        """Create a new chat room"""
         try:
             room_id = str(uuid.uuid4())
-            
             room = ChatRoomResponse(
                 room_id=room_id,
                 task=room_data.task,
@@ -89,61 +138,22 @@ class ChatRoom:
                 join_url=f"/chat/{room_id}"
             )
             
-            # Store in memory
-            self.rooms[room_id] = room
+            # Initialize room resources
+            self.manager.rooms[room_id] = room
+            self.manager.messages[room_id] = []
+            await self.manager.create_pipeline(room_id, room_data.personality)
+            
             return room
             
         except Exception as e:
-            print(f"Error creating room: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def get_room(self, room_id: str) -> ChatRoomResponse:
-        room = self.rooms.get(room_id)
+        """Get room details"""
+        room = self.manager.rooms.get(room_id)
         if not room:
-            raise HTTPException(status_code=404, detail=f"Room {room_id} not found")
+            raise RoomNotFoundError(room_id)
         return room
-
-    async def list_rooms(self, user_id: str) -> List[ChatRoomResponse]:
-        # Return rooms from memory where user is a participant
-        user_rooms = [
-            room for room in self.rooms.values()
-            if any(p.user_id == user_id for p in room.participants)
-        ]
-        
-        # Try to get additional rooms from database
-        try:
-            db_rooms = await self.db.list_rooms(user_id)
-            if db_rooms:
-                # Combine with memory rooms, avoiding duplicates
-                room_ids = {r.room_id for r in user_rooms}
-                user_rooms.extend([r for r in db_rooms if r.room_id not in room_ids])
-        except Exception as e:
-            print(f"Database listing failed: {e}")
-            
-        return user_rooms
-
-    async def add_message(self, room_id: str, message: dict) -> Message:
-        if room_id not in self.rooms:
-            raise HTTPException(status_code=404, detail=f"Room {room_id} not found")
-            
-        msg = Message(
-            user_id=message["user_id"],
-            channel_name=room_id,
-            content=message["content"],
-            ts=datetime.utcnow().timestamp(),
-            role=message.get("role", "user"),
-            type=message.get("type", "message")
-        )
-        
-        if room_id not in self.messages:
-            self.messages[room_id] = []
-        self.messages[room_id].append(msg)
-        return msg
-
-    async def get_messages(self, room_id: str) -> List[Message]:
-        if room_id not in self.rooms:
-            raise HTTPException(status_code=404, detail=f"Room {room_id} not found")
-        return self.messages.get(room_id, [])
 
 # Create FastAPI app
 app = FastAPI(title="Chat Room API")
@@ -214,69 +224,107 @@ async def handle_message(sid, data):
     print(f"Message from {sid}: {data}")
     room_id = data.get('room_id')
     if room_id:
-        # Broadcast message to room
-        await sio.emit('message', {
-            'user': data.get('user', 'Anonymous'),
-            'text': data.get('text', '')
-        }, room=room_id)
+        chat_room = await get_chat_room()
+        # Process message through ChatRoom
+        message = {
+            "user_id": data.get('user', 'Anonymous'),
+            "content": data.get('text', ''),
+            "type": "message",
+            "role": "user"
+        }
+        await chat_room.add_message(room_id, message)
 
-# Updated dependency injection
-_chat_room: Optional[ChatRoom] = None
+# Update the dependency injection
+_chat_room_manager: Optional[ChatRoomManager] = None
 
-async def get_chat_room() -> ChatRoom:
-    global _chat_room
-    if _chat_room is None:
+async def get_chat_room() -> ChatRoomManager:
+    """Get or create the ChatRoomManager singleton instance"""
+    global _chat_room_manager
+    if _chat_room_manager is None:
         try:
             db = DatabaseManager(config=bot_config)
             memory = MemoryManager(config=bot_config)
-            _chat_room = ChatRoom(db, memory)
+            _chat_room_manager = ChatRoomManager(db, memory)
         except Exception as e:
-            print(f"Error initializing ChatRoom: {e}")
-            # Create without database but with memory
+            print(f"Error initializing ChatRoomManager with database: {e}")
             memory = MemoryManager(config=bot_config)
-            _chat_room = ChatRoom(None, memory)
-    return _chat_room
+            _chat_room_manager = ChatRoomManager(None, memory)
+    return _chat_room_manager
 
-# API routes
+# Update the API routes to use ChatRoomManager methods
 @app.post("/api/rooms/", response_model=ChatRoomResponse)
 async def create_chat_room(
     room_data: ChatRoomCreate,
-    chat_room: ChatRoom = Depends(get_chat_room)
+    chat_room: ChatRoomManager = Depends(get_chat_room)
 ) -> ChatRoomResponse:
-    return await chat_room.create_room(room_data)
+    controller = RoomController(chat_room)
+    return await controller.create_room(room_data)
 
 @app.get("/api/rooms/list", response_model=List[ChatRoomResponse])
 async def list_user_rooms(
     user_id: str = None,
-    chat_room: ChatRoom = Depends(get_chat_room)
+    chat_room: ChatRoomManager = Depends(get_chat_room)
 ):
     """List all chat rooms for a user"""
     if not user_id:
         # Return all rooms if no user_id specified
         return list(chat_room.rooms.values())
-    return await chat_room.list_rooms(user_id)
+    # Filter rooms for specific user
+    return [
+        room for room in chat_room.rooms.values()
+        if any(p.user_id == user_id for p in room.participants)
+    ]
 
 @app.get("/api/rooms/{room_id}", response_model=ChatRoomResponse)
 async def get_room(
     room_id: str,
-    chat_room: ChatRoom = Depends(get_chat_room)
+    chat_room: ChatRoomManager = Depends(get_chat_room)
 ) -> ChatRoomResponse:
-    return await chat_room.get_room(room_id)
+    controller = RoomController(chat_room)
+    return await controller.get_room(room_id)
 
 @app.post("/api/rooms/{room_id}/messages", response_model=Message)
 async def add_message(
     room_id: str,
     message: dict,
-    chat_room: ChatRoom = Depends(get_chat_room)
+    chat_room: ChatRoomManager = Depends(get_chat_room)
 ) -> Message:
-    return await chat_room.add_message(room_id, message)
+    """Add a message to a chat room"""
+    if room_id not in chat_room.rooms:
+        raise RoomNotFoundError(room_id)
+        
+    msg = Message(
+        user_id=message["user_id"],
+        channel_name=room_id,
+        content=message["content"],
+        ts=datetime.utcnow().timestamp(),
+        role=message.get("role", "user"),
+        type=message.get("type", "message")
+    )
+    
+    if room_id not in chat_room.messages:
+        chat_room.messages[room_id] = []
+    chat_room.messages[room_id].append(msg)
+    
+    # Process message through pipeline if available
+    try:
+        ai_response = await chat_room.process_user_message(room_id, msg)
+        if ai_response:
+            chat_room.messages[room_id].append(ai_response)
+    except PipelineError as e:
+        print(f"Pipeline error: {e}")
+        
+    return msg
 
 @app.get("/api/rooms/{room_id}/messages", response_model=List[Message])
 async def get_messages(
     room_id: str,
-    chat_room: ChatRoom = Depends(get_chat_room)
+    chat_room: ChatRoomManager = Depends(get_chat_room)
 ) -> List[Message]:
-    return await chat_room.get_messages(room_id)
+    """Get all messages in a chat room"""
+    if room_id not in chat_room.rooms:
+        raise RoomNotFoundError(room_id)
+    return chat_room.messages.get(room_id, [])
 
 @app.get("/api/health")
 async def health_check():
@@ -286,16 +334,17 @@ async def health_check():
 # Setup templates
 templates = Jinja2Templates(directory="templates")
 
-# Add chat route to handle join URLs
+# Update the chat route
 @app.get("/chat/{room_id}", response_class=HTMLResponse)
 async def join_chat(
     request: Request,
     room_id: str,
-    chat_room: ChatRoom = Depends(get_chat_room)
+    chat_room: ChatRoomManager = Depends(get_chat_room)
 ):
     """Join a chat room"""
     try:
-        room = await chat_room.get_room(room_id)
+        controller = RoomController(chat_room)
+        room = await controller.get_room(room_id)
         
         # Create share URL
         share_url = str(request.url)
@@ -306,15 +355,98 @@ async def join_chat(
                 "request": request,
                 "room": room,
                 "room_name": room.task.title,
-                "username": "User",  # Default username
+                "username": "User",
                 "personality": room.personality,
                 "task": room.task.description,
                 "participants": [p.name for p in room.participants],
                 "share_url": share_url,
                 "room_id": room_id,
-                # Remove session and url_for references
-                "ws_url": f"ws://{request.url.hostname}:{request.url.port}/ws/chat/{room_id}"
+                "ws_url": f"ws://{request.url.hostname}:{request.url.port}/ws/{room_id}"
             }
         )
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Chat room not found: {str(e)}") 
+        raise HTTPException(status_code=404, detail=f"Chat room not found: {str(e)}")
+
+# Update setup_routes to use dependency injection and add error handling
+def setup_routes(app: FastAPI):
+    """Setup WebSocket and API routes with proper error handling"""
+    
+    @app.websocket("/ws/{room_id}")
+    async def websocket_endpoint(
+        websocket: WebSocket, 
+        room_id: str,
+        manager: ChatRoomManager = Depends(get_chat_room)
+    ):
+        try:
+            await websocket.accept()
+            
+            # Initialize room connections if needed
+            if room_id not in manager.active_connections:
+                manager.active_connections[room_id] = []
+            
+            # Initialize room messages if needed    
+            if room_id not in manager.messages:
+                manager.messages[room_id] = []
+                
+            # Verify room exists
+            if room_id not in manager.rooms:
+                await websocket.close(code=4004, reason="Room not found")
+                return
+                
+            manager.active_connections[room_id].append(websocket)
+            
+            try:
+                while True:
+                    data = await websocket.receive_json()
+                    message = Message(**data)
+                    
+                    # Store user message
+                    manager.messages[room_id].append(message)
+                    await manager.broadcast_message(room_id, message.dict())
+                    
+                    # Get and broadcast AI response
+                    try:
+                        ai_response = await manager.process_user_message(room_id, message)
+                        if ai_response:
+                            manager.messages[room_id].append(ai_response)
+                            await manager.broadcast_message(room_id, ai_response.dict())
+                    except PipelineError as e:
+                        await websocket.send_json({
+                            "error": f"Failed to process message: {str(e)}"
+                        })
+                        
+            except Exception as e:
+                print(f"WebSocket error in room {room_id}: {e}")
+                
+            finally:
+                # Safely remove connection
+                if room_id in manager.active_connections:
+                    try:
+                        manager.active_connections[room_id].remove(websocket)
+                    except ValueError:
+                        pass  # Connection already removed
+                        
+        except Exception as e:
+            print(f"Failed to initialize WebSocket connection: {e}")
+            await websocket.close(code=4000)
+
+# Initialize routes when app starts
+@app.on_event("startup")
+async def startup_event():
+    """Initialize routes and manager on startup"""
+    setup_routes(app)
+
+# Error handlers
+@app.exception_handler(RoomNotFoundError)
+async def room_not_found_handler(request: Request, exc: RoomNotFoundError):
+    return JSONResponse(
+        status_code=404,
+        content={"detail": str(exc)}
+    )
+
+@app.exception_handler(PipelineError)
+async def pipeline_error_handler(request: Request, exc: PipelineError):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)}
+    ) 

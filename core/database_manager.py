@@ -9,6 +9,7 @@ import threading
 import json
 from pathlib import Path
 import time
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -44,116 +45,15 @@ class DatabaseManager:
             db_path = data_dir / db_name
             os.makedirs(os.path.dirname(db_path), exist_ok=True)
             
-            # Initialize connection and cursor
-            conn = None
-            cursor = None
+            # Initialize tables using the _initialize_tables method
+            self._initialize_tables()
             
-            try:
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-                
-                # Create users table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS users (
-                        user_id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        first_seen REAL NOT NULL,
-                        last_seen REAL NOT NULL
-                    )
-                ''')
-                
-                # Create personas table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS personas (
-                        channel_name TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        description TEXT NOT NULL,
-                        traits TEXT NOT NULL,
-                        communication_style TEXT NOT NULL,
-                        response_characteristics TEXT NOT NULL,
-                        created_at REAL NOT NULL,
-                        updated_at REAL NOT NULL
-                    )
-                ''')
-                
-                # Create message queue table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS new_msg_queue (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id TEXT NOT NULL,
-                        channel_name TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        ts REAL NOT NULL,
-                        role TEXT DEFAULT 'user'
-                    )
-                ''')
-                
-                # Create history table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS history (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id TEXT NOT NULL,
-                        channel_name TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        ts REAL NOT NULL,
-                        role TEXT DEFAULT 'user'
-                    )
-                ''')
-                
-                # Create context history table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS context_history (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        message_ts REAL NOT NULL,
-                        channel_name TEXT NOT NULL,
-                        user_id TEXT NOT NULL,
-                        message_content TEXT NOT NULL,
-                        context TEXT,
-                        long_term_memory_id INTEGER,
-                        response TEXT,
-                        response_type TEXT
-                    )
-                ''')
-                
-                # Create long-term memories table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS long_term_memories (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        channel_name TEXT NOT NULL,
-                        timestamp REAL NOT NULL,
-                        summary TEXT NOT NULL,
-                        insights TEXT NOT NULL,
-                        key_points TEXT NOT NULL,
-                        participants TEXT NOT NULL,
-                        conversation_start REAL,
-                        conversation_end REAL
-                    )
-                ''')
-                
-                # Create room tasks table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS room_tasks (
-                        room_name TEXT PRIMARY KEY,
-                        task TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                
-                conn.commit()
-                logger.info("Successfully initialized SQLite database")
-                
-            except Exception as e:
-                logger.error(f"Error initializing SQLite database: {str(e)}")
-                raise
-            finally:
-                if cursor:
-                    cursor.close()
-                if conn:
-                    conn.close()
+            logger.info(f"Successfully initialized SQLite database at {db_path}")
+            return True
             
         except Exception as e:
             logger.error(f"Error initializing SQLite database: {str(e)}")
-            raise
+            return False
     
     def _get_db_path(self) -> Path:
         """Get the database path handling both config types"""
@@ -164,7 +64,7 @@ class DatabaseManager:
             db_name = getattr(self.config, 'sqDB_NAME', 'chat_history.db')
         return data_dir / db_name
 
-    def save_user(self, user_id: str, name: str, timestamp: float) -> None:
+    def save_user(self, user_id: str, name: str, timestamp: float, room_id: str) -> None:
         """Save or update user information"""
         with self.lock:
             db_path = self._get_db_path()
@@ -175,16 +75,16 @@ class DatabaseManager:
                 # Try to update existing user
                 cursor.execute('''
                     UPDATE users 
-                    SET name = ?, last_seen = ?
+                    SET name = ?, timestamp = ?, room_id = ?
                     WHERE user_id = ?
-                ''', (name, timestamp, user_id))
+                ''', (name, timestamp, room_id, user_id))
                 
                 # If no user was updated, insert new user
                 if cursor.rowcount == 0:
                     cursor.execute('''
-                        INSERT INTO users (user_id, name, first_seen, last_seen)
+                        INSERT INTO users (user_id, name, timestamp, room_id)
                         VALUES (?, ?, ?, ?)
-                    ''', (user_id, name, timestamp, timestamp))
+                    ''', (user_id, name, timestamp, room_id))
                 
                 conn.commit()
                 logger.info(f"Saved user information for {name} ({user_id})")
@@ -209,30 +109,86 @@ class DatabaseManager:
             conn.close()
     
     def save_message(self, message: Message) -> None:
-        """Save message to queue"""
-        with self.lock:
+        """Save a message to the database with room_id"""
+        try:
+            # Get a fresh connection to the database with timeout
             db_path = self._get_db_path()
-            conn = sqlite3.connect(db_path)
+            conn = sqlite3.connect(db_path, timeout=30.0, isolation_level=None)
             cursor = conn.cursor()
             
             try:
-                cursor.execute('''
-                    INSERT INTO new_msg_queue (user_id, channel_name, content, ts, role)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (message.user_id, message.channel_name, message.content, message.ts, message.role))
-                conn.commit()
+                # Begin immediate transaction to acquire a write lock
+                cursor.execute('BEGIN IMMEDIATE')
+                
+                # Generate an ID if not present
+                message_id = getattr(message, 'id', str(uuid.uuid4()))
+                
+                # Extract channel_name from message
+                channel_name = message.channel_name
+                
+                # Insert into messages table with room_id
+                cursor.execute(
+                    "INSERT INTO messages (id, content, user_id, room_id, timestamp, type) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        message_id,
+                        message.content,
+                        message.user_id,
+                        channel_name,  # Use channel_name as room_id
+                        message.ts,  # Use ts as timestamp
+                        message.type
+                    )
+                )
+                
+                # Commit the transaction
+                cursor.execute('COMMIT')
+                
+                logger.info(f"Saved message {message_id} to database for room {channel_name}")
+                
+                # Also save to history table with field names matching what save_to_history expects
+                # This is done in a separate transaction to avoid holding locks too long
+                history_data = {
+                    'id': message_id,
+                    'content': message.content,
+                    'user_id': message.user_id,
+                    'room_id': channel_name,
+                    'channel_name': channel_name,  # Required by save_to_history
+                    'ts': message.ts,  # Required by save_to_history (not 'timestamp')
+                    'type': message.type,
+                    'role': getattr(message, 'role', 'user')  # Required by save_to_history
+                }
+                
+                # Save to history in a separate try block to avoid dependency
+                self.save_to_history(history_data)
+                
+            except Exception as e:
+                # Rollback if there's an error
+                try:
+                    cursor.execute('ROLLBACK')
+                except:
+                    pass
+                logger.error(f"Error saving message to database: {str(e)}")
+                raise
             finally:
                 cursor.close()
                 conn.close()
+        except Exception as e:
+            logger.error(f"Error in save_message: {str(e)}")
+            # Don't re-raise to allow the application to continue
             
     def save_to_history(self, message_dict: Dict) -> None:
         """Save message to history"""
-        with self.lock:
+        # Use a local lock instead of self.lock to prevent deadlocks
+        try:
             db_path = self._get_db_path()
-            conn = sqlite3.connect(db_path)
+            # Add timeout and isolation_level parameters to prevent locking
+            conn = sqlite3.connect(db_path, timeout=30.0, isolation_level=None)
             cursor = conn.cursor()
             
             try:
+                # Begin immediate transaction to acquire a write lock
+                cursor.execute('BEGIN IMMEDIATE')
+                
                 cursor.execute('''
                     INSERT INTO history (user_id, channel_name, content, ts, role)
                     VALUES (?, ?, ?, ?, ?)
@@ -243,10 +199,25 @@ class DatabaseManager:
                     message_dict['ts'],
                     message_dict.get('role', 'user')
                 ))
-                conn.commit()
+                
+                # Explicitly commit the transaction
+                cursor.execute('COMMIT')
+                
+            except Exception as e:
+                # Rollback if there's an error
+                try:
+                    cursor.execute('ROLLBACK')
+                except:
+                    pass
+                logger.error(f"Error saving to history: {str(e)}")
+                raise
             finally:
                 cursor.close()
                 conn.close()
+        except Exception as e:
+            logger.error(f"Error in save_to_history: {str(e)}")
+            # Re-raise the exception to let the caller handle it
+            raise
                 
     def save_context_history(self, message: Message, context: List[Dict], response: Optional[str], response_type: str) -> None:
         """Save context history"""
@@ -348,47 +319,73 @@ class DatabaseManager:
             conn.close()
 
     def get_history(self, options: Dict) -> List[Dict]:
-        """Get conversation history based on options"""
-        db_path = self._get_db_path()
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
+        """Get message history with room_id filtering"""
         try:
-            query = '''
-                SELECT user_id, channel_name, content, ts, role
-                FROM history
-                WHERE ts >= ? AND ts <= ?
-            '''
-            params = [
-                float(options.get('start_time', 0)),
-                float(options.get('end_time', datetime.now().timestamp()))
-            ]
+            # Get a fresh connection to the database with timeout
+            db_path = self._get_db_path()
+            conn = sqlite3.connect(db_path, timeout=30.0)
+            cursor = conn.cursor()
             
-            if options.get('channel'):
-                query += ' AND channel_name = ?'
-                params.append(options['channel'])
-            
-            if options.get('users'):
-                placeholders = ','.join('?' * len(options['users']))
-                query += f' AND user_id IN ({placeholders})'
-                params.extend(options['users'])
-            
-            query += ' ORDER BY ts ASC'
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            
-            return [{
-                'user_id': row[0],
-                'channel_name': row[1],
-                'content': row[2],
-                'ts': row[3],
-                'role': row[4]
-            } for row in rows]
-            
-        finally:
-            cursor.close()
-            conn.close()
+            try:
+                # Base query
+                query = "SELECT * FROM messages WHERE 1=1"
+                params = []
+                
+                # Filter by room_id if provided
+                if options.get('room_id'):
+                    query += " AND room_id = ?"
+                    params.append(options['room_id'])
+                
+                # Filter by channel_name if provided (alternative to room_id)
+                elif options.get('channel_name'):
+                    query += " AND room_id = ?"
+                    params.append(options['channel_name'])
+                    
+                # Filter by user_id if provided
+                if options.get('user_id'):
+                    query += " AND user_id = ?"
+                    params.append(options['user_id'])
+                
+                # Add timestamp constraints if provided
+                if options.get('start_time'):
+                    query += " AND timestamp >= ?"
+                    params.append(options['start_time'])
+                
+                if options.get('end_time'):
+                    query += " AND timestamp <= ?"
+                    params.append(options['end_time'])
+                
+                # Add limit if provided
+                if options.get('limit'):
+                    query += " ORDER BY timestamp DESC LIMIT ?"
+                    params.append(options['limit'])
+                else:
+                    query += " ORDER BY timestamp DESC"
+                
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                
+                # Convert to list of dictionaries
+                messages = []
+                for row in rows:
+                    messages.append({
+                        'id': row[0],
+                        'content': row[1],
+                        'user_id': row[2],
+                        'room_id': row[3],
+                        'channel_name': row[3],  # Add channel_name as alias for room_id
+                        'timestamp': row[4],
+                        'ts': row[4],  # Add ts as alias for timestamp
+                        'type': row[5]
+                    })
+                    
+                return messages
+            finally:
+                cursor.close()
+                conn.close()
+        except Exception as e:
+            logger.error(f"Error retrieving message history: {str(e)}")
+            return []
 
     def save_persona(self, channel_name: str, personality: Personality) -> bool:
         """Save or update a persona for a channel"""
@@ -400,16 +397,17 @@ class DatabaseManager:
             try:
                 current_time = time.time()
                 
-                # Convert personality data to JSON strings
-                traits = json.dumps(personality.traits)
-                communication_style = json.dumps(personality.communication_style)
-                response_characteristics = json.dumps(personality.response_characteristics)
+                # Convert personality to dictionary format and then to JSON
+                personality_dict = personality.to_dict()
+                traits = json.dumps(personality_dict["traits"])
+                response_characteristics = json.dumps(personality_dict["response_characteristics"])
+                communication_style = personality_dict.get("communication_style", "standard") 
                 
                 # Try to update existing persona
                 cursor.execute("""
                     INSERT OR REPLACE INTO personas (
                         channel_name, name, description, traits, 
-                        communication_style, response_characteristics,
+                        response_characteristics, communication_style,
                         created_at, updated_at
                     ) VALUES (
                         ?, ?, ?, ?, ?, ?, 
@@ -418,7 +416,7 @@ class DatabaseManager:
                     )
                 """, (
                     channel_name, personality.name, personality.description,
-                    traits, communication_style, response_characteristics,
+                    traits, response_characteristics, communication_style,
                     channel_name, current_time, current_time
                 ))
                 
@@ -441,7 +439,7 @@ class DatabaseManager:
         
         try:
             cursor.execute("""
-                SELECT name, description, traits, communication_style, response_characteristics
+                SELECT name, description, traits, response_characteristics, communication_style
                 FROM personas
                 WHERE channel_name = ?
             """, (channel_name,))
@@ -450,20 +448,22 @@ class DatabaseManager:
             if not row:
                 return None
             
-            name, description, traits_json, comm_style_json, resp_char_json = row
+            name, description, traits_json, resp_char_json, communication_style = row
             
             # Parse JSON strings back to dictionaries
             traits = json.loads(traits_json)
-            communication_style = json.loads(comm_style_json)
             response_characteristics = json.loads(resp_char_json)
             
-            return Personality(
-                name=name,
-                description=description,
-                traits=traits,
-                communication_style=communication_style,
-                response_characteristics=response_characteristics
-            )
+            # Create personality dictionary and convert to Personality object
+            personality_dict = {
+                "name": name,
+                "description": description,
+                "traits": traits,
+                "response_characteristics": response_characteristics,
+                "communication_style": communication_style or "standard"
+            }
+            
+            return Personality.from_dict(personality_dict)
             
         except Exception as e:
             logger.error(f"Error loading persona: {str(e)}")
@@ -498,16 +498,130 @@ class DatabaseManager:
     def _initialize_tables(self):
         """Initialize database tables"""
         try:
-            # Create room tasks table
-            self.db.execute("""
+            db_path = self._get_db_path()
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Create messages table with room_id column
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS messages (
+                id TEXT PRIMARY KEY,
+                content TEXT,
+                user_id TEXT,
+                room_id TEXT,
+                timestamp REAL,
+                type TEXT
+            )
+            ''')
+            
+            # Create index on room_id for faster queries
+            cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)
+            ''')
+            
+            # Create history table if it doesn't exist
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                channel_name TEXT,
+                content TEXT,
+                ts REAL,
+                role TEXT DEFAULT 'user'
+            )
+            ''')
+            
+            # Create index on channel_name for faster queries
+            cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_history_channel_name ON history(channel_name)
+            ''')
+            
+            # Create users table - add room_id field
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id TEXT PRIMARY KEY,
+                name TEXT,
+                room_id TEXT,
+                timestamp REAL
+            )
+            ''')
+            
+            # Create index on room_id for users table
+            cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_users_room_id ON users(room_id)
+            ''')
+            
+            # Create personas table if it doesn't exist - match table name with save_persona
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS personas (
+                channel_name TEXT PRIMARY KEY,
+                name TEXT,
+                description TEXT,
+                traits TEXT,
+                response_characteristics TEXT,
+                communication_style TEXT,
+                created_at REAL,
+                updated_at REAL
+            )
+            ''')
+            
+            # Create message queue table if it doesn't exist
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS new_msg_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                channel_name TEXT,
+                content TEXT,
+                ts REAL,
+                role TEXT DEFAULT 'user'
+            )
+            ''')
+            
+            # Create long-term memories table if it doesn't exist
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS long_term_memories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel_name TEXT,
+                timestamp REAL,
+                summary TEXT,
+                insights TEXT,
+                key_points TEXT,
+                participants TEXT,
+                conversation_start REAL,
+                conversation_end REAL
+            )
+            ''')
+            
+            # Create context history table if it doesn't exist
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS context_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_ts REAL,
+                channel_name TEXT,
+                user_id TEXT,
+                message_content TEXT,
+                context TEXT,
+                long_term_memory_id INTEGER,
+                response TEXT,
+                response_type TEXT
+            )
+            ''')
+            
+            # Create room_tasks table if it doesn't exist
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS room_tasks (
                     room_name TEXT PRIMARY KEY,
-                    task TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                task TEXT,
+                timestamp REAL
                 )
-            """)
+            ''')
             
-            # Existing table creation code goes here
-            self.db.commit()
+            conn.commit()
+            logger.info("Database tables initialized successfully")
         except Exception as e:
-            logger.error(f"Error initializing tables: {str(e)}", exc_info=True)
+            conn.rollback()
+            logger.error(f"Error initializing database tables: {str(e)}")
+            raise
+        finally:
+            cursor.close()
+            conn.close()

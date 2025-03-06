@@ -92,7 +92,7 @@ class LLMCache:
             chat = ChatOpenAI(
                 model_name="gpt-4",
                 temperature=temperature,
-                max_tokens=max_tokens,
+                max_completion_tokens=max_tokens,
                 cache=SQLiteCache(database_path=str(self.cache_dir / "sqlite_cache.db"))
             )
             

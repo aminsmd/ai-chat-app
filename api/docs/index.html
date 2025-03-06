@@ -80,7 +80,7 @@
     <div class="endpoint">
         <span class="method post">POST</span>
         <span class="path">/api/rooms/</span>
-        <div class="description">Creates a new chat room.</div>
+        <div class="description">Creates a new chat room with WebSocket support.</div>
         
         <div class="parameters">
             <h3>Request Body</h3>
@@ -102,13 +102,11 @@
   "description": "string",
   "traits": {
     "emotional_stability": {"level": 0.8, "description": "string"},
-    "extraversion": {"level": 0.7, "description": "string"},
-    ...
+    "extraversion": {"level": 0.7, "description": "string"}
   },
   "communication_style": {
     "formality": 0.7,
-    "directness": 0.8,
-    ...
+    "directness": 0.8
   }
 }</code></pre>
             </div>
@@ -135,6 +133,35 @@
   "status": "string",
   "join_url": "string"
 }</code></pre>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/ws/{room_id}</span>
+        <div class="description">WebSocket endpoint for real-time chat communication.</div>
+        
+        <div class="parameters">
+            <h3>WebSocket Messages</h3>
+            <div class="parameter">
+                <div>Send message format:</div>
+                <pre><code>{
+  "user_id": "string",
+  "content": "string",
+  "type": "message",
+  "role": "user"
+}</code></pre>
+            </div>
+            <div class="parameter">
+                <div>Receive message format:</div>
+                <pre><code>{
+  "user_id": "string",
+  "content": "string",
+  "type": "message",
+  "role": "assistant|user|system",
+  "ts": number
+}</code></pre>
+            </div>
         </div>
     </div>
 
@@ -257,7 +284,7 @@
     <div class="endpoint">
         <span class="method get">GET</span>
         <span class="path">/chat/{room_id}</span>
-        <div class="description">Joins a chat room via web interface.</div>
+        <div class="description">Web interface for chat room.</div>
         
         <div class="parameters">
             <h3>Path Parameters</h3>
@@ -269,7 +296,27 @@
 
         <div class="response">
             <h3>Response</h3>
-            <div>Returns HTML page for chat interface</div>
+            <div>Returns HTML page with chat interface including:</div>
+            <ul>
+                <li>Real-time message updates via WebSocket</li>
+                <li>AI personality settings</li>
+                <li>Task information</li>
+                <li>Participant list</li>
+                <li>Message history</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="path">/api/health</span>
+        <div class="description">Health check endpoint.</div>
+        
+        <div class="response">
+            <h3>Response</h3>
+            <pre><code>{
+  "status": "ok"
+}</code></pre>
         </div>
     </div>
 </body>

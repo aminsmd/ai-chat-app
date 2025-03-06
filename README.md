@@ -1,7 +1,7 @@
 # TRAIL: Team Research and AI Integration Lab
 
 ## Python VENV
-1. python version 3.10
+1. python version 3.11
 2. Steps:   
     following tutorials in https://gist.github.com/ryumada/c22133988fd1c22a66e4ed1b23eca233   
     pip install -r requirement_venv.txt

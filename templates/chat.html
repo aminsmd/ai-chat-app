@@ -17,6 +17,9 @@
             --message-user-bg: #2563eb;
             --message-assistant-bg: #f1f5f9;
             --message-system-bg: #fef3c7;
+            --level-low: #ef4444;
+            --level-medium: #f59e0b;
+            --level-high: #10b981;
         }
 
         * {
@@ -69,6 +72,50 @@
         .username {
             font-size: 0.875rem;
             opacity: 0.9;
+        }
+
+        .share-link {
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .share-link input {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 0.8125rem;
+        }
+
+        .copy-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .copy-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .leave-room {
+            color: white;
+            text-decoration: none;
+            font-size: 0.875rem;
+            opacity: 0.8;
+            transition: opacity 0.15s ease;
+        }
+
+        .leave-room:hover {
+            opacity: 1;
         }
 
         .messages {
@@ -212,7 +259,7 @@
         }
 
         .personality-panel {
-            width: 280px;
+            width: 320px;
             padding: 1.25rem;
             background-color: #f8fafc;
             border-right: 1px solid var(--border-color);
@@ -220,7 +267,50 @@
         }
 
         .personality-section {
-            margin-bottom: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .personality-section h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            color: #1e293b;
+        }
+
+        .trait-edit-item {
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .trait-edit-item:last-child {
+            border-bottom: none;
+        }
+
+        .trait-edit-item label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #334155;
+        }
+
+        .trait-select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+
+        .trait-level-description {
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background-color: #f8fafc;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #475569;
+            line-height: 1.4;
         }
 
         .section-title {
@@ -231,7 +321,62 @@
         }
 
         .trait-item {
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .subtrait-item {
+            margin: 0.5rem 0 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .subtrait-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .subtrait-behavior {
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            line-height: 1.4;
+            margin-left: 0.5rem;
+            padding-left: 0.5rem;
+            border-left: 2px solid var(--border-color);
+        }
+
+        .personality-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .edit-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.375rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .edit-button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .toggle-behaviors {
+            font-size: 0.75rem;
+            color: var(--primary-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 0.25rem;
+            text-decoration: underline;
         }
 
         .trait-name {
@@ -277,12 +422,12 @@
         .modal-content {
             position: relative;
             background-color: white;
-            margin: 10vh auto;
-            padding: 2rem;
+            margin: 5vh auto;
+            padding: 1.5rem;
             width: 90%;
-            max-width: 600px;
+            max-width: 700px;
             border-radius: 12px;
-            max-height: 80vh;
+            max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
         }
@@ -352,37 +497,180 @@
         }
         .user { background-color: #e3f2fd; }
         .ai { background-color: #f5f5f5; }
+
+        .trait-level-category {
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 0.25rem;
+        }
+        
+        .level-low {
+            background-color: var(--level-low);
+            color: white;
+        }
+        
+        .level-medium {
+            background-color: var(--level-medium);
+            color: white;
+        }
+        
+        .level-high {
+            background-color: var(--level-high);
+            color: white;
+        }
+
+        .personality-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .behaviors-container {
+            margin-top: 0.75rem;
+            background-color: white;
+            border-radius: 6px;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .subtrait-item:not(:last-child) {
+            margin-bottom: 0.75rem;
+        }
+
+        .toggle-behaviors {
+            font-size: 0.75rem;
+            color: var(--primary-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 0.5rem;
+            text-decoration: underline;
+            display: block;
+        }
+
+        .toggle-behaviors:hover {
+            color: var(--primary-hover);
+        }
+
+        .trait-edit-item {
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .trait-level-description {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-top: 0.375rem;
+            padding: 0.375rem;
+            background-color: #f1f5f9;
+            border-radius: 4px;
+            line-height: 1.3;
+        }
+
+        .subcomponents-list {
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subcomponent-item {
+            margin: 0.25rem 0;
+            font-size: 0.8125rem;
+        }
+        
+        .subcomponent-name {
+            color: var(--text-secondary);
+            margin-right: 0.5rem;
+        }
+        
+        .trait-edit-header {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            display: block;
+            font-size: 1rem;
+        }
+        
+        .subcomponent-edit {
+            margin-bottom: 0.75rem;
+            padding-left: 0.75rem;
+            border-left: 2px solid var(--border-color);
+        }
+
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #fff;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+    
     <div class="chat-container">
         <div class="personality-panel">
             <div class="personality-header">
-                <span>AI Personality</span>
+                <span>AI Personality: {{ personality.name }}</span>
                 <button class="edit-button" onclick="openModal()">Edit</button>
             </div>
             
-            <div class="personality-section">
-                <div class="section-title">Traits</div>
-                {% for trait, info in personality.traits.items() %}
-                <div class="trait-item" data-trait="{{ trait }}">
-                    <div class="trait-name">{{ trait|replace('_', ' ')|title }}</div>
-                    <div class="trait-bar">
-                        <div class="trait-level" style="width: {{ info.level * 100 }}%"></div>
-                    </div>
-                    <div class="trait-description">{{ info.description }}</div>
-                </div>
-                {% endfor %}
+            <div class="personality-description">
+                {{ personality.description }}
             </div>
             
             <div class="personality-section">
-                <div class="section-title">Communication Style</div>
-                {% for style, level in personality.communication_style.items() %}
-                <div class="trait-item" data-style="{{ style }}">
-                    <div class="trait-name">{{ style|replace('_', ' ')|title }}</div>
-                    <div class="trait-bar">
-                        <div class="trait-level" style="width: {{ level * 100 }}%"></div>
-                    </div>
+                <div class="section-title">Traits & Behaviors</div>
+                <div id="behaviorMap" style="display: none;">{{ behavior_map|tojson }}</div>
+                
+                {% for trait, subcomponents in personality.traits.items() %}
+                <div class="trait-item" data-trait="{{ trait }}">
+                    <div class="trait-name">{{ trait|replace('_', ' ')|title }}</div>
+                    
+                    <!-- Display subcomponents -->
+                    {% if subcomponents|length > 0 %}
+                        <div class="subcomponents-list">
+                        {% for subcomponent, level in subcomponents.items() %}
+                            <div class="subcomponent-item">
+                                <span class="subcomponent-name">{{ subcomponent|replace('_', ' ')|title }}:</span>
+                                <span class="trait-level-category level-{{ level }}">{{ level|title }}</span>
+                </div>
+                {% endfor %}
+            </div>
+                    {% endif %}
+                    
+                    <button class="toggle-behaviors" onclick="toggleBehaviors('{{ trait }}')">Show behaviors</button>
+                    <div class="behaviors-container" id="behaviors-{{ trait }}" style="display: none;"></div>
                 </div>
                 {% endfor %}
             </div>
@@ -445,31 +733,294 @@
             
             <form id="personalityForm" onsubmit="savePersonality(event)">
                 <div class="personality-section">
+                    <h3>Personality Details</h3>
+                    <div class="trait-edit-item">
+                        <label>
+                            Name
+                            <input type="text" name="name" class="trait-select" value="{{ personality.name }}" required>
+                        </label>
+                        <div class="trait-level-description">
+                            A distinctive name for this AI personality.
+                        </div>
+                    </div>
+                    
+                    <div class="trait-edit-item">
+                        <label>
+                            Description
+                            <textarea name="description" class="trait-select" style="height: 100px; resize: vertical;" required>{{ personality.description }}</textarea>
+                        </label>
+                        <div class="trait-level-description">
+                            Brief description of this personality's key characteristics.
+                        </div>
+                    </div>
+                    
                     <h3>Traits</h3>
-                    {% for trait, info in personality.traits.items() %}
+                    
+                    <!-- Hidden field for communication_style -->
+                    <input type="hidden" name="communication_style" value="standard">
+                    
+                    <!-- Emotional Stability -->
+                    <div class="trait-edit-item">
+                        <label class="trait-edit-header">Emotional Stability</label>
+                        
+                        <div class="subcomponent-edit">
                     <label>
-                        {{ trait|replace('_', ' ')|title }}
-                        <input type="range" min="0" max="100" 
-                               value="{{ info.level * 100 }}"
-                               name="trait_{{ trait }}"
-                               oninput="updateValue(this)">
-                        <span class="value-display">{{ info.level }}</span>
+                                Adjustment
+                                <select name="trait_emotional_stability_adjustment" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.emotional_stability.adjustment == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.emotional_stability.adjustment == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.emotional_stability.adjustment == 'high' %}selected{% endif %}>High</option>
+                                </select>
                     </label>
-                    {% endfor %}
+                            <div class="trait-level-description" id="desc-emotional_stability_adjustment-low" style="display: {% if personality.traits.emotional_stability.adjustment == 'low' %}block{% else %}none{% endif %}">
+                                Display anxious, uncertain behaviors.
+                            </div>
+                            <div class="trait-level-description" id="desc-emotional_stability_adjustment-medium" style="display: {% if personality.traits.emotional_stability.adjustment == 'medium' %}block{% else %}none{% endif %}">
+                                Remain calm, showing moderate confidence.
+                            </div>
+                            <div class="trait-level-description" id="desc-emotional_stability_adjustment-high" style="display: {% if personality.traits.emotional_stability.adjustment == 'high' %}block{% else %}none{% endif %}">
+                                Exhibit poise and resilience, offering reassurance in stressful situations.
+                            </div>
+                        </div>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Self Esteem
+                                <select name="trait_emotional_stability_self_esteem" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.emotional_stability.self_esteem == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.emotional_stability.self_esteem == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.emotional_stability.self_esteem == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-emotional_stability_self_esteem-low" style="display: {% if personality.traits.emotional_stability.self_esteem == 'low' %}block{% else %}none{% endif %}">
+                                Show self-doubt, hesitancy in suggestions.
+                            </div>
+                            <div class="trait-level-description" id="desc-emotional_stability_self_esteem-medium" style="display: {% if personality.traits.emotional_stability.self_esteem == 'medium' %}block{% else %}none{% endif %}">
+                                Display a balanced sense of confidence.
+                            </div>
+                            <div class="trait-level-description" id="desc-emotional_stability_self_esteem-high" style="display: {% if personality.traits.emotional_stability.self_esteem == 'high' %}block{% else %}none{% endif %}">
+                                Exude confidence in decisions and promote self-assured actions.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Extraversion -->
+                    <div class="trait-edit-item">
+                        <label class="trait-edit-header">Extraversion</label>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Dominance
+                                <select name="trait_extraversion_dominance" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.extraversion.dominance == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.extraversion.dominance == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.extraversion.dominance == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-extraversion_dominance-low" style="display: {% if personality.traits.extraversion.dominance == 'low' %}block{% else %}none{% endif %}">
+                                Adopt a reserved, passive role in discussions.
+                            </div>
+                            <div class="trait-level-description" id="desc-extraversion_dominance-medium" style="display: {% if personality.traits.extraversion.dominance == 'medium' %}block{% else %}none{% endif %}">
+                                Engage actively but not overpoweringly.
+                            </div>
+                            <div class="trait-level-description" id="desc-extraversion_dominance-high" style="display: {% if personality.traits.extraversion.dominance == 'high' %}block{% else %}none{% endif %}">
+                                Take charge, offer assertive guidance, and direct team actions.
+                            </div>
+                        </div>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Affiliation
+                                <select name="trait_extraversion_affiliation" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.extraversion.affiliation == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.extraversion.affiliation == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.extraversion.affiliation == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-extraversion_affiliation-low" style="display: {% if personality.traits.extraversion.affiliation == 'low' %}block{% else %}none{% endif %}">
+                                Maintain professional distance, focus on task completion over relationships.
+                            </div>
+                            <div class="trait-level-description" id="desc-extraversion_affiliation-medium" style="display: {% if personality.traits.extraversion.affiliation == 'medium' %}block{% else %}none{% endif %}">
+                                Balance task focus with relationship building.
+                            </div>
+                            <div class="trait-level-description" id="desc-extraversion_affiliation-high" style="display: {% if personality.traits.extraversion.affiliation == 'high' %}block{% else %}none{% endif %}">
+                                Actively build team relationships and foster a sense of belonging.
+                            </div>
+                        </div>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Social Perceptiveness
+                                <select name="trait_extraversion_social_perceptiveness" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.extraversion.social_perceptiveness == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.extraversion.social_perceptiveness == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.extraversion.social_perceptiveness == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-extraversion_social_perceptiveness-low" style="display: {% if personality.traits.extraversion.social_perceptiveness == 'low' %}block{% else %}none{% endif %}">
+                                Focus primarily on factual content rather than social cues.
+                            </div>
+                            <div class="trait-level-description" id="desc-extraversion_social_perceptiveness-medium" style="display: {% if personality.traits.extraversion.social_perceptiveness == 'medium' %}block{% else %}none{% endif %}">
+                                Balance attention between content and social dynamics.
+                            </div>
+                            <div class="trait-level-description" id="desc-extraversion_social_perceptiveness-high" style="display: {% if personality.traits.extraversion.social_perceptiveness == 'high' %}block{% else %}none{% endif %}">
+                                Demonstrate high awareness of team dynamics and unspoken feelings.
+                            </div>
+                        </div>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Expressivity
+                                <select name="trait_extraversion_expressivity" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.extraversion.expressivity == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.extraversion.expressivity == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.extraversion.expressivity == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-extraversion_expressivity-low" style="display: {% if personality.traits.extraversion.expressivity == 'low' %}block{% else %}none{% endif %}">
+                                Communicate in a concise, reserved manner with minimal elaboration.
+                            </div>
+                            <div class="trait-level-description" id="desc-extraversion_expressivity-medium" style="display: {% if personality.traits.extraversion.expressivity == 'medium' %}block{% else %}none{% endif %}">
+                                Express thoughts clearly with appropriate detail and energy.
+                            </div>
+                            <div class="trait-level-description" id="desc-extraversion_expressivity-high" style="display: {% if personality.traits.extraversion.expressivity == 'high' %}block{% else %}none{% endif %}">
+                                Communicate enthusiastically with animated language and engaging style.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Openness -->
+                    <div class="trait-edit-item">
+                        <label class="trait-edit-header">Openness</label>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Flexibility
+                                <select name="trait_openness_flexibility" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.openness.flexibility == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.openness.flexibility == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.openness.flexibility == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-openness_flexibility-low" style="display: {% if personality.traits.openness.flexibility == 'low' %}block{% else %}none{% endif %}">
+                                Prefer established approaches and conventional thinking.
+                            </div>
+                            <div class="trait-level-description" id="desc-openness_flexibility-medium" style="display: {% if personality.traits.openness.flexibility == 'medium' %}block{% else %}none{% endif %}">
+                                Balance traditional methods with openness to new ideas.
+                            </div>
+                            <div class="trait-level-description" id="desc-openness_flexibility-high" style="display: {% if personality.traits.openness.flexibility == 'high' %}block{% else %}none{% endif %}">
+                                Embrace novel approaches and creative thinking.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Agreeableness -->
+                    <div class="trait-edit-item">
+                        <label class="trait-edit-header">Agreeableness</label>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Trust
+                                <select name="trait_agreeableness_trust" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.agreeableness.trust == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.agreeableness.trust == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.agreeableness.trust == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-agreeableness_trust-low" style="display: {% if personality.traits.agreeableness.trust == 'low' %}block{% else %}none{% endif %}">
+                                Approach team discussions with healthy skepticism and verification.
+                            </div>
+                            <div class="trait-level-description" id="desc-agreeableness_trust-medium" style="display: {% if personality.traits.agreeableness.trust == 'medium' %}block{% else %}none{% endif %}">
+                                Balance trust with appropriate verification.
+                            </div>
+                            <div class="trait-level-description" id="desc-agreeableness_trust-high" style="display: {% if personality.traits.agreeableness.trust == 'high' %}block{% else %}none{% endif %}">
+                                Extend trust readily and assume positive intentions from team members.
+                            </div>
+                        </div>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Cooperation
+                                <select name="trait_agreeableness_cooperation" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.agreeableness.cooperation == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.agreeableness.cooperation == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.agreeableness.cooperation == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-agreeableness_cooperation-low" style="display: {% if personality.traits.agreeableness.cooperation == 'low' %}block{% else %}none{% endif %}">
+                                Prioritize direct communication and challenge others' ideas.
+                            </div>
+                            <div class="trait-level-description" id="desc-agreeableness_cooperation-medium" style="display: {% if personality.traits.agreeableness.cooperation == 'medium' %}block{% else %}none{% endif %}">
+                                Balance cooperation with appropriate assertiveness.
+                            </div>
+                            <div class="trait-level-description" id="desc-agreeableness_cooperation-high" style="display: {% if personality.traits.agreeableness.cooperation == 'high' %}block{% else %}none{% endif %}">
+                                Emphasize team harmony and consensus-building.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Conscientiousness -->
+                    <div class="trait-edit-item">
+                        <label class="trait-edit-header">Conscientiousness</label>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Dependability
+                                <select name="trait_conscientiousness_dependability" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.conscientiousness.dependability == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.conscientiousness.dependability == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.conscientiousness.dependability == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-conscientiousness_dependability-low" style="display: {% if personality.traits.conscientiousness.dependability == 'low' %}block{% else %}none{% endif %}">
+                                Adapt quickly to changing priorities without extensive planning.
+                            </div>
+                            <div class="trait-level-description" id="desc-conscientiousness_dependability-medium" style="display: {% if personality.traits.conscientiousness.dependability == 'medium' %}block{% else %}none{% endif %}">
+                                Balance reliability with flexibility to adjust plans.
+                            </div>
+                            <div class="trait-level-description" id="desc-conscientiousness_dependability-high" style="display: {% if personality.traits.conscientiousness.dependability == 'high' %}block{% else %}none{% endif %}">
+                                Demonstrate exceptional reliability and follow-through on commitments.
+                            </div>
+                        </div>
+                        
+                        <div class="subcomponent-edit">
+                            <label>
+                                Achievement
+                                <select name="trait_conscientiousness_achievement" class="trait-select" onchange="showTraitDescription(this)">
+                                    <option value="low" {% if personality.traits.conscientiousness.achievement == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if personality.traits.conscientiousness.achievement == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if personality.traits.conscientiousness.achievement == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </label>
+                            <div class="trait-level-description" id="desc-conscientiousness_achievement-low" style="display: {% if personality.traits.conscientiousness.achievement == 'low' %}block{% else %}none{% endif %}">
+                                Focus on adequate results without unnecessary perfectionism.
+                            </div>
+                            <div class="trait-level-description" id="desc-conscientiousness_achievement-medium" style="display: {% if personality.traits.conscientiousness.achievement == 'medium' %}block{% else %}none{% endif %}">
+                                Strive for quality results without excessive perfectionism.
+                            </div>
+                            <div class="trait-level-description" id="desc-conscientiousness_achievement-high" style="display: {% if personality.traits.conscientiousness.achievement == 'high' %}block{% else %}none{% endif %}">
+                                Demonstrate exceptional attention to detail and thoroughness.
+                            </div>
+                        </div>
+                    </div>
+                    
                 </div>
                 
                 <div class="personality-section">
-                    <h3>Communication Style</h3>
-                    {% for style, level in personality.communication_style.items() %}
+                    <h3>Response Characteristics</h3>
+                    <div class="trait-edit-item">
                     <label>
-                        {{ style|replace('_', ' ')|title }}
-                        <input type="range" min="0" max="100" 
-                               value="{{ level * 100 }}"
-                               name="comm_{{ style }}"
-                               oninput="updateValue(this)">
-                        <span class="value-display">{{ level }}</span>
+                            Response Length
+                            <select name="response_length" class="trait-select">
+                                <option value="short" {% if personality.response_characteristics.response_length == 'short' %}selected{% endif %}>Short</option>
+                                <option value="medium" {% if personality.response_characteristics.response_length == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="long" {% if personality.response_characteristics.response_length == 'long' %}selected{% endif %}>Long</option>
+                            </select>
                     </label>
-                    {% endfor %}
+                        <div class="trait-level-description">
+                            Controls how verbose the AI's responses will be in conversations.
+                        </div>
+                    </div>
                 </div>
                 
                 <button type="submit" class="save-button">Save Changes</button>
@@ -478,6 +1029,40 @@
     </div>
 
     <script>
+        // Add a custom :contains selector polyfill similar to jQuery
+        // This allows us to use querySelector with :contains() which is not standard
+        document.querySelectorAll = (function(originalQsa) {
+            return function(selector) {
+                try {
+                    if (selector.includes(":contains(")) {
+                        // Extract the search text and element selector
+                        const regex = /(.*):contains\((['"])(.*?)\2\)(.*)/;
+                        const match = selector.match(regex);
+                        
+                        if (match) {
+                            const [_, beforeContains, quote, searchText, afterContains] = match;
+                            const newSelector = beforeContains + afterContains;
+                            
+                            // Get all elements matching the base selector
+                            const elements = originalQsa.call(this, newSelector);
+                            
+                            // Filter for elements containing the text
+                            return Array.from(elements).filter(el => 
+                                el.textContent.includes(searchText)
+                            );
+                        }
+                    }
+                    
+                    // Fall back to normal selector
+                    return originalQsa.call(this, selector);
+                } catch (e) {
+                    console.error("Error with custom selector:", e);
+                    // Fall back to normal selector on error
+                    return originalQsa.call(this, selector);
+                }
+            };
+        })(document.querySelectorAll);
+        
         // Initialize socket with reconnection options
         const socket = io({
             reconnection: true,
@@ -495,6 +1080,12 @@
         const roomId = "{{ room_id }}";
 
         function addMessage(data) {
+            // Skip messages with undefined user or text
+            if (!data.user || !data.text) {
+                console.log("Skipping message with undefined data:", data);
+                return;
+            }
+            
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${data.user === username ? 'user' : data.user === 'System' ? 'system' : 'assistant'}`;
             
@@ -528,12 +1119,28 @@
         function sendMessage() {
             const message = messageInput.value.trim();
             if (message) {
-                socket.emit('message', {
+                console.log('Sending message:', message);
+                
+                // Create message data object
+                const messageData = {
                     text: message,
                     user: username,
-                    room_id: roomId  // Add room_id to message data
-                });
+                    room_id: roomId
+                };
+                
+                console.log('Message data:', messageData);
+                
+                // Emit message event with data
+                socket.emit('message', messageData);
+                
+                // Clear input field
                 messageInput.value = '';
+                
+                // Add user's message to the UI immediately
+                addMessage({
+                    user: username,
+                    text: message
+                });
             }
         }
 
@@ -580,7 +1187,17 @@
         });
 
         socket.on('message', (data) => {
-            addMessage(data);
+            console.log('Received message:', data);
+            
+            // Ensure data has user and text properties
+            if (data && data.user && (data.text || data.text === '')) {
+                // Don't add duplicate messages (since we already add user messages when sent)
+                if (data.user !== username || data.user === 'AI' || data.user === 'System') {
+                    addMessage(data);
+                }
+            } else {
+                console.log("Received invalid message data:", data);
+            }
         });
 
         socket.on('update_participants', (data) => {
@@ -603,54 +1220,171 @@
         
         function savePersonality(event) {
             event.preventDefault();
+            console.log('Save personality triggered');
+            
+            // Show loading overlay
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+                console.log('Loading overlay shown');
+            } else {
+                console.log('ERROR: Loading overlay element not found!');
+            }
+            
             const form = event.target;
             const formData = new FormData(form);
             const personality = {
+                name: formData.get('name'),
+                description: formData.get('description'),
                 traits: {},
-                communication_style: {}
+                response_characteristics: {
+                    response_length: formData.get('response_length')
+                },
+                communication_style: formData.get('communication_style') || 'standard'
             };
             
-            formData.forEach((value, key) => {
-                const [type, name] = key.split('_');
-                const normalizedValue = parseFloat(value) / 100;
-                
-                if (type === 'trait') {
-                    personality.traits[name] = {
-                        level: normalizedValue
-                    };
-                } else if (type === 'comm') {
-                    personality.communication_style[name] = normalizedValue;
-                }
-            });
+            console.log('Form data - Name:', personality.name);
+            console.log('Form data - Description:', personality.description);
             
-            console.log('Sending personality update:', personality);  // Debug log
+            // Process trait form data
+            // Create an object to store the subcomponents by their parent traits
+            const traitSubcomponents = {};
+            
+            for (const [key, value] of formData.entries()) {
+                if (key.startsWith('trait_')) {
+                    // Extract the parts (e.g., from 'trait_emotional_stability_adjustment')
+                    const parts = key.split('_');
+                    // First part is 'trait', second is the main trait, the rest form the subcomponent
+                    if (parts.length >= 3) {
+                        const mainTrait = parts[1]; // e.g., 'emotional'
+                        const mainTraitPart2 = parts.length > 3 ? parts[2] : ''; // e.g., 'stability'
+                        
+                        // Construct the main trait name
+                        let traitName;
+                        if (mainTraitPart2) {
+                            traitName = `${mainTrait}_${mainTraitPart2}`; // e.g., 'emotional_stability'
+                        } else {
+                            traitName = mainTrait;
+                        }
+                        
+                        // Get the subcomponent name (the rest of the parts after trait and main trait)
+                        let subcomponentParts;
+                        if (mainTraitPart2) {
+                            subcomponentParts = parts.slice(3); // e.g., ['adjustment']
+                        } else {
+                            subcomponentParts = parts.slice(2);
+                        }
+                        
+                        const subcomponentName = subcomponentParts.join('_'); // e.g., 'adjustment'
+                        
+                        // Initialize the trait object if not exists
+                        if (!traitSubcomponents[traitName]) {
+                            traitSubcomponents[traitName] = {};
+                        }
+                        
+                        // Add the subcomponent
+                        traitSubcomponents[traitName][subcomponentName] = value;
+                    }
+                }
+            }
+            
+            // Add the processed trait subcomponents to the personality object
+            personality.traits = traitSubcomponents;
+            
+            console.log('Sending personality update:', personality);
             socket.emit('update_personality', personality);
+            
+            // Set a timeout to hide the loading overlay in case the server doesn't respond
+            setTimeout(() => {
+                if (loadingOverlay && loadingOverlay.style.display === 'flex') {
+                    console.log('Timeout: closing overlay after 10 seconds');
+                    loadingOverlay.style.display = 'none';
             closeModal();
+                    alert('The update is taking longer than expected. The changes may still be applied.');
+                }
+            }, 10000);
         }
         
-        // Add socket listener for personality updates
-        socket.on('personality_updated', (data) => {
-            console.log('Received personality update:', data);  // Debug log
-            // Update the display without reloading
-            updatePersonalityDisplay(data);
+        // Move the socket.on handler outside of any function to ensure it's registered
+        socket.on('personality_updated', function(data) {
+            console.log('Received personality_updated event:', data);
+            console.log('Name from server:', data.name);
+            console.log('Description from server:', data.description);
+            
+            // DEBUG: Check DOM structure
+            const personalityPanel = document.querySelector('.personality-panel');
+            if (personalityPanel) {
+                console.log('Personality panel found:', personalityPanel);
+            } else {
+                console.log('ERROR: No personality panel found!');
+            }
+            
+            // Find elements using specific selectors
+            const nameElement = document.querySelector('.personality-header span');
+            const descriptionElement = document.querySelector('.personality-description');
+            
+            console.log('Name element:', nameElement);
+            console.log('Description element:', descriptionElement);
+            
+            // Update the UI directly
+            if (nameElement && data.name) {
+                console.log('Updating name to:', data.name);
+                nameElement.textContent = 'AI Personality: ' + data.name;
+            }
+            
+            if (descriptionElement && data.description) {
+                console.log('Updating description to:', data.description);
+                descriptionElement.textContent = data.description;
+            }
+            
+            // Update trait displays
+            if (data.traits) {
+                updateTraits(data.traits);
+            }
+            
+            // Hide loading overlay if it's visible
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+                console.log('Loading overlay hidden');
+            }
+            
+            // Close modal if it's open
+            closeModal();
         });
-
-        function updatePersonalityDisplay(data) {
-            // Update trait bars
-            Object.entries(data.traits).forEach(([trait, info]) => {
-                const traitBar = document.querySelector(`[data-trait="${trait}"] .trait-level`);
-                if (traitBar) {
-                    traitBar.style.width = `${info.level * 100}%`;
+        
+        function updateTraits(traits) {
+            console.log('Updating traits:', traits);
+            // Update each trait section
+            for (const [traitName, subcomponents] of Object.entries(traits)) {
+                const traitElement = document.querySelector(`[data-trait="${traitName}"]`);
+                if (traitElement) {
+                    console.log(`Found trait element for ${traitName}`);
+                    const subcomponentsList = traitElement.querySelector('.subcomponents-list');
+                    if (subcomponentsList) {
+                        // Clear existing subcomponents
+                        subcomponentsList.innerHTML = '';
+                        
+                        // Add updated subcomponents
+                        for (const [subcomponent, level] of Object.entries(subcomponents)) {
+                            const subItem = document.createElement('div');
+                            subItem.className = 'subcomponent-item';
+                            
+                            const nameSpan = document.createElement('span');
+                            nameSpan.className = 'subcomponent-name';
+                            nameSpan.textContent = subcomponent.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) + ':';
+                            
+                            const levelSpan = document.createElement('span');
+                            levelSpan.className = `trait-level-category level-${level}`;
+                            levelSpan.textContent = level.charAt(0).toUpperCase() + level.slice(1);
+                            
+                            subItem.appendChild(nameSpan);
+                            subItem.appendChild(levelSpan);
+                            subcomponentsList.appendChild(subItem);
+                        }
+                    }
                 }
-            });
-
-            // Update communication style bars
-            Object.entries(data.communication_style).forEach(([style, level]) => {
-                const styleBar = document.querySelector(`[data-style="${style}"] .trait-level`);
-                if (styleBar) {
-                    styleBar.style.width = `${level * 100}%`;
-                }
-            });
+            }
         }
 
         function copyShareLink() {
@@ -673,12 +1407,145 @@
             .then(messages => {
                 const container = document.getElementById('messages');
                 messages.forEach(msg => {
+                    // Skip messages with undefined user_id or content
+                    if (!msg.user_id || !msg.content) {
+                        console.log("Skipping message with undefined data:", msg);
+                        return;
+                    }
+                    
                     const div = document.createElement('div');
-                    div.className = `message ${msg.role}`;
-                    div.textContent = `${msg.user_id}: ${msg.content}`;
+                    div.className = `message ${msg.role || 'assistant'}`;
+                    
+                    const senderDiv = document.createElement('div');
+                    senderDiv.className = 'sender';
+                    senderDiv.textContent = msg.user_id;
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.textContent = msg.content;
+                    
+                    div.appendChild(senderDiv);
+                    div.appendChild(textDiv);
                     container.appendChild(div);
                 });
                 container.scrollTop = container.scrollHeight;
+            })
+            .catch(error => {
+                console.error("Error loading messages:", error);
+                addMessage({
+                    user: 'System',
+                    text: 'Error loading previous messages'
+                });
+            });
+
+        // Behavior map functionality
+        function toggleBehaviors(trait) {
+            const container = document.getElementById(`behaviors-${trait}`);
+            const button = document.querySelector(`[data-trait="${trait}"] .toggle-behaviors`);
+            
+            if (container.style.display === 'none') {
+                // Load behaviors if not already loaded
+                if (container.children.length === 0) {
+                    loadBehaviors(trait, container);
+                }
+                container.style.display = 'block';
+                button.textContent = 'Hide behaviors';
+            } else {
+                container.style.display = 'none';
+                button.textContent = 'Show behaviors';
+            }
+        }
+        
+        function loadBehaviors(trait, container) {
+            try {
+                // Get behavior map from hidden div
+                const behaviorMapElement = document.getElementById('behaviorMap');
+                const behaviorMap = JSON.parse(behaviorMapElement.textContent);
+                
+                // Get trait subcomponents from behavior map
+                const traitBehaviors = behaviorMap[trait];
+                
+                if (traitBehaviors) {
+                    // Create elements for each subtrait
+                    for (const [subtrait, behaviors] of Object.entries(traitBehaviors)) {
+                        const subtraitDiv = document.createElement('div');
+                        subtraitDiv.className = 'subtrait-item';
+                        
+                        const subtraitName = document.createElement('div');
+                        subtraitName.className = 'subtrait-name';
+                        subtraitName.textContent = subtrait.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        
+                        // Find the level for this subcomponent
+                        let level = 'medium'; // Default to medium
+                        
+                        // Find the corresponding subcomponent item in the DOM
+                        const subcomponentItems = document.querySelectorAll(`[data-trait="${trait}"] .subcomponent-item`);
+                        for (const item of subcomponentItems) {
+                            const nameEl = item.querySelector('.subcomponent-name');
+                            if (nameEl && nameEl.textContent.toLowerCase().includes(subtrait.replace('_', ' '))) {
+                                const levelEl = item.querySelector('.trait-level-category');
+                                if (levelEl) {
+                                    level = levelEl.textContent.trim().toLowerCase();
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // If we couldn't find the level, use the first level category we can find
+                        if (level === 'medium' && !subcomponentItems.length) {
+                            const levelEl = document.querySelector(`[data-trait="${trait}"] .trait-level-category`);
+                            if (levelEl) {
+                                level = levelEl.textContent.trim().toLowerCase();
+                            }
+                        }
+                        
+                        const behaviorText = document.createElement('div');
+                        behaviorText.className = 'subtrait-behavior';
+                        
+                        // Get the behavior for the current level
+                        if (behaviors && behaviors[level]) {
+                            behaviorText.textContent = behaviors[level];
+                        } else {
+                            behaviorText.textContent = 'No specific behavior defined for this level.';
+                        }
+                        
+                        subtraitDiv.appendChild(subtraitName);
+                        subtraitDiv.appendChild(behaviorText);
+                        container.appendChild(subtraitDiv);
+                    }
+                } else {
+                    container.textContent = 'No specific behaviors defined for this trait.';
+                }
+            } catch (error) {
+                console.error('Error loading behaviors:', error);
+                container.textContent = 'Error loading behaviors.';
+            }
+        }
+
+        function showTraitDescription(select) {
+            const id = select.name.replace('trait_', '').replace(/_/g, '_');
+            const level = select.value;
+            
+            // Hide all descriptions for this trait
+            document.querySelectorAll(`[id^="desc-${id}-"]`).forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Show the selected level description
+            const descElement = document.getElementById(`desc-${id}-${level}`);
+            if (descElement) {
+                descElement.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add this to log DOM structure on page load
+            console.log("Page loaded, checking personality panel structure:");
+            const personalityPanel = document.querySelector('.personality-panel');
+            if (personalityPanel) {
+                console.log("Found personality panel, inner HTML:", personalityPanel.innerHTML);
+            } else {
+                console.log("No personality panel found on load");
+            }
             });
     </script>
 </body>

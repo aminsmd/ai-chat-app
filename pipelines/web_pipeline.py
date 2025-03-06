@@ -1,7 +1,7 @@
 import logging
 import time
-from typing import Dict, Optional
-from models.base import Message
+from typing import Dict, Optional, Union
+from models.models import Message
 from models.web_config import WebBotConfig
 from pipelines.pipeline_base import BasePipeline
 from core.action_manager import ActionManager
@@ -10,6 +10,7 @@ from core.response_generator import ResponseGenerator
 from core.database_manager import DatabaseManager
 from core.memory_manager import MemoryManager
 from sample_info.tasks import desert_survival_task
+import socket  # Add this import at the top
 
 logger = logging.getLogger(__name__)
 
@@ -58,31 +59,63 @@ class WebPipeline(BasePipeline):
         self.action_manager = ActionManager(config, self.personality)
         self.response_generator = ResponseGenerator(config, self.personality, self.task)
         
+        # Print local network IP address
+        local_ip = self._get_local_ip()
+        logger.info(f"App accessible on local network at: {local_ip}")
+        print(f"App accessible on local network at: {local_ip}")
+        
     def _create_message(self, message_data: Dict) -> Message:
         """Create a Message object from web message data"""
         return Message(
             user_id=message_data.get('user', 'web_user'),
-            channel_name='web',
+            channel_name=self.room_name if self.room_name else message_data.get('room_id', 'web'),
             content=message_data['text'],
             ts=time.time(),
             role="user"
         )
     
-    def process_message(self, message_data: Dict, user_profile_dict: Dict[str, str]) -> Optional[str]:
-        """Process a message and return a response"""
+    def process_message(self, message_data: Union[Dict, Message], user_profile_dict: Dict[str, str]) -> Optional[str]:
+        """Process a message and return a response
+        
+        Args:
+            message_data (Union[Dict, Message]): Either a dictionary with message data or a Message object
+            user_profile_dict (Dict[str, str]): Dictionary with user profile information
+            
+        Returns:
+            Optional[str]: Response text if generated, None otherwise
+        """
         try:
-            # Step 1-2: Extract metadata and create Message object
+            # Step 1-2: Extract metadata and create Message object if needed
             logger.info("Step 1-2: Extracting message metadata")
-            message = self._create_message(message_data)
+            if isinstance(message_data, Message):
+                # If a Message object is provided, use it directly
+                message = message_data
+            else:
+                # If a dictionary is provided, create a Message object
+                message = self._create_message(message_data)
+            
+            # Set channel_name to room_name for consistency
+            channel_name = self.room_name if self.room_name else message.channel_name
+            logger.info(f"Using channel_name: {channel_name} (room_name: {self.room_name}, message channel: {message.channel_name})")
+            
+            # Update message channel name for consistency if needed
+            if message.channel_name != channel_name:
+                logger.info(f"Updating message channel from {message.channel_name} to {channel_name}")
+                message.channel_name = channel_name
             
             # Step 3: Save message to database
-            logger.info("Step 3: Saving message to database")
+            logger.info(f"Step 3: Saving message to database - Channel: {message.channel_name}, User: {message.user_id}")
             self.db_manager.save_message(message)
             
-            # Step 4: Gather context
-            logger.info("Step 4: Gathering context")
+            # Step 4: Gathering context
+            logger.info(f"Step 4: Gathering context for channel {channel_name}")
             self.memory_manager.add_message(message, user_profile_dict)
-            context = self.memory_manager.get_context('web')
+            context = self.memory_manager.get_context(channel_name)
+            
+            # Log context details
+            logger.info(f"Context length: {len(context)} messages")
+            for i, ctx_msg in enumerate(context):
+                logger.info(f"Context message {i}: role={ctx_msg.get('role')}, content={ctx_msg.get('content')[:30]}...")
             
             # Step 5: Decide whether to respond
             logger.info("Step 5: Deciding whether to respond")
@@ -94,17 +127,22 @@ class WebPipeline(BasePipeline):
                 logger.info("Step 6: Generating response")
                 response = self.response_generator.generate_response(context, message)
                 if response:
-                    # Step 7: Save response
+                    # Step 7: Saving response
                     logger.info("Step 7: Saving response")
                     self._save_response(response, message, user_profile_dict)
             
             # Save context history
-            self.db_manager.save_context_history(
-                message=message,
-                context=context,
-                response=response,
-                response_type="responded" if response else "did not respond"
-            )
+            logger.info(f"Saving context history with {len(context)} messages")
+            try:
+                self.db_manager.save_context_history(
+                    message=message,
+                    context=context,
+                    response=response,
+                    response_type="responded" if response else "did not respond"
+                )
+                logger.info("Context history saved successfully")
+            except Exception as ctx_err:
+                logger.error(f"Error saving context history: {str(ctx_err)}")
             
             return response
             
@@ -118,11 +156,13 @@ class WebPipeline(BasePipeline):
             # Create response message
             response_msg = Message(
                 user_id="assistant",
-                channel_name=message.channel_name,
+                channel_name=message.channel_name,  # Use the same channel_name as the original message
                 content=response_content,
                 ts=time.time(),  # Use current time instead of message.ts + offset
                 role="assistant"
             )
+            
+            logger.info(f"Saving assistant response to channel: {response_msg.channel_name}")
             
             # Save to database
             self.db_manager.save_message(response_msg)
@@ -131,4 +171,16 @@ class WebPipeline(BasePipeline):
             self.memory_manager.add_message(response_msg, user_profile_dict)
             
         except Exception as e:
-            logger.error(f"Error saving response: {str(e)}", exc_info=True) 
+            logger.error(f"Error saving response: {str(e)}", exc_info=True)
+
+    def _get_local_ip(self):
+        """Get the local network IP address of the machine."""
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except Exception as e:
+            logger.error(f"Error obtaining local IP: {str(e)}", exc_info=True)
+            return "Unable to determine local IP" 

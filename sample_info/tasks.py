@@ -1,7 +1,4 @@
-desert_survival_task = """You are a teammate that is helping the group to solve a problem. Don't overshare information that solves the problem directly, but be an active participant in the group to solve the problem together. You can agree with or challenge an idea.
-Limit your messages to 1-2 short sentences in a human-like manner.
-Here is the problem you are solving:
-
+desert_survival_task = """
 Desert Survival
 
 The Scenario It is approximately 10:00 am in mid-July and you have just crash landed in the Atacama Desert in South America.

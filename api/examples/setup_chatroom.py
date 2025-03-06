@@ -1,102 +1,83 @@
 import asyncio
 import httpx
-from datetime import datetime, timedelta
+import websockets
 import json
+from datetime import datetime, timedelta
 import random
 from pathlib import Path
 import sys
-
-# Add the parent directory to the Python path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 from core.personality import generate_random_persona
 
-async def setup_chatroom():
+async def setup_and_connect_to_room():
     async with httpx.AsyncClient(base_url="http://localhost:8000") as client:
-        # 1. Create sample users
-        users = [
+        # 1. Create room data
+        selected_task = {
+            "title": "Website Redesign Planning",
+            "description": "Plan the redesign of our company website",
+            "objectives": [
+                "Define key design requirements",
+                "Create timeline for implementation",
+                "Assign team responsibilities"
+            ],
+            "deadline": (datetime.utcnow() + timedelta(days=7)).isoformat()
+        }
+
+        # 2. Generate random personality
+        selected_persona = generate_random_persona()
+
+        # 3. Define participants
+        participants = [
             {"user_id": "u1", "name": "Alice Johnson", "role": "Project Manager"},
             {"user_id": "u2", "name": "Bob Smith", "role": "Developer"},
-            {"user_id": "u3", "name": "Carol White", "role": "Designer"},
             {"user_id": "ai1", "name": "AI Assistant", "role": "Facilitator", "is_ai": True}
         ]
 
-        # 2. Create sample tasks
-        tasks = [
-            {
-                "title": "Website Redesign Planning",
-                "description": "Plan the redesign of our company website",
-                "objectives": [
-                    "Define key design requirements",
-                    "Create timeline for implementation",
-                    "Assign team responsibilities",
-                    "Identify potential challenges"
-                ],
-                "deadline": (datetime.utcnow() + timedelta(days=7)).isoformat()
-            },
-            {
-                "title": "API Integration Project",
-                "description": "Integrate third-party payment API into our platform",
-                "objectives": [
-                    "Review API documentation",
-                    "Design integration architecture",
-                    "Create implementation plan",
-                    "Set up testing environment"
-                ],
-                "deadline": (datetime.utcnow() + timedelta(days=14)).isoformat()
-            }
-        ]
-
-        # 3. Generate random personality
-        selected_persona = generate_random_persona()
-
-        # 4. Select random task
-        selected_task = random.choice(tasks)
-
-        # 5. Create room data
+        # 4. Create room
         room_data = {
             "task": selected_task,
-            "personality": selected_persona.dict(),  # Convert Pydantic model to dict
-            "participants": users
+            "personality": selected_persona.dict(),
+            "participants": participants
         }
 
         try:
-            # 6. Create the room
-            print("\nCreating chat room...")
+            # Create room via REST API
             response = await client.post("/api/rooms/", json=room_data)
             response.raise_for_status()
-            room_data = response.json()
-            print(f"\nCreated room: {room_data['room_id']}")
-            print(f"Join URL: {room_data['join_url']}")
-            
-            # 7. Send initial message
-            room_id = room_data["room_id"]
-            welcome_message = {
-                "user_id": "ai1",
-                "content": f"Welcome to the {selected_task['title']} discussion! I'll be your AI assistant for this project.",
-                "type": "message",
-                "role": "assistant"
-            }
-            
-            response = await client.post(f"/api/rooms/{room_id}/messages", json=welcome_message)
-            response.raise_for_status()
-            print("\nSent welcome message!")
-            
-            # 8. Get and display room details
-            response = await client.get(f"/api/rooms/{room_id}")
-            response.raise_for_status()
-            print("\nRoom details:")
-            print(f"Task: {selected_task['title']}")
-            print(f"Participants: {', '.join(user['name'] for user in users)}")
-            print(f"AI Personality: {selected_persona.name}")
-            print(f"\nYou can now access the chat room at: http://localhost:8000/chat/{room_id}")
-            
-        except httpx.HTTPStatusError as e:
-            print(f"HTTP Error: {e.response.status_code}")
-            print(f"Error detail: {e.response.text}")
+            room = response.json()
+            room_id = room["room_id"]
+            print(f"\nCreated room: {room_id}")
+
+            # Connect to WebSocket
+            uri = f"ws://localhost:8000/ws/{room_id}"
+            async with websockets.connect(uri) as websocket:
+                print(f"Connected to WebSocket for room {room_id}")
+
+                # Send initial message
+                message = {
+                    "user_id": "u1",
+                    "content": "Hello everyone! Let's start planning.",
+                    "type": "message",
+                    "role": "user"
+                }
+                await websocket.send(json.dumps(message))
+
+                # Wait for and print AI response
+                response = await websocket.recv()
+                print(f"\nAI Response: {response}")
+
+                # Get room messages via REST API
+                response = await client.get(f"/api/rooms/{room_id}/messages")
+                messages = response.json()
+                print("\nCurrent messages:", messages)
+
+                print(f"\nYou can now access the chat room at: http://localhost:8000/chat/{room_id}")
+                
+                # Keep connection alive for a bit
+                await asyncio.sleep(5)
+
         except Exception as e:
             print(f"Error: {str(e)}")
 
 if __name__ == "__main__":
-    print("Setting up chat room...")
-    asyncio.run(setup_chatroom()) 
+    print("Setting up chat room and connecting...")
+    asyncio.run(setup_and_connect_to_room()) 
