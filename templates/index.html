@@ -168,6 +168,69 @@
         .api-docs-button:hover {
             background-color: #2980b9;
         }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .switch-label {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -205,6 +268,13 @@
                     <input type="text" name="room_name" placeholder="Room name" required>
                     <input type="text" name="name" placeholder="Your name" required>
                     <button type="submit">Create Room</button>
+                </div>
+                <div class="switch-container">
+                    <label class="switch-label" for="ai_enabled">Enable AI Teammate</label>
+                    <label class="switch">
+                        <input type="checkbox" id="ai_enabled" name="ai_enabled" value="1" checked>
+                        <span class="slider"></span>
+                    </label>
                 </div>
             </form>
         </div>

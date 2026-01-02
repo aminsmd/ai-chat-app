@@ -112,7 +112,7 @@ def create_pipeline():
         logger.error(f"Error initializing pipeline: {str(e)}")
         return None
 
-def create_room_dict(room_name, pipeline):
+def create_room_dict(room_name, pipeline, ai_enabled=True):
     """Create a new room dictionary with all required fields"""
     # Update pipeline with room name
     pipeline.room_name = room_name
@@ -125,7 +125,8 @@ def create_room_dict(room_name, pipeline):
         'name': room_name,
         'pipeline': pipeline,
         'participants': set(),
-        'messages': []  # Store message history: [{'user': str, 'text': str}]
+        'messages': [],  # Store message history: [{'user': str, 'text': str}]
+        'ai_enabled': ai_enabled  # Flag to enable/disable AI teammate
     }
 
 @app.route('/')
@@ -136,6 +137,7 @@ def index():
 def create_room():
     room_name = request.form.get('room_name')
     user_name = request.form.get('name')
+    ai_enabled = request.form.get('ai_enabled') == '1'  # Checkbox returns '1' if checked, None if unchecked
     
     if not room_name or not user_name:
         return redirect(url_for('index'))
@@ -147,7 +149,7 @@ def create_room():
     if not pipeline:
         return "Failed to create room: AI assistant not properly configured", 500
     
-    active_rooms[room_id] = create_room_dict(room_name, pipeline)
+    active_rooms[room_id] = create_room_dict(room_name, pipeline, ai_enabled=ai_enabled)
     room = active_rooms[room_id]
     
     # Create user and add to room
@@ -267,7 +269,8 @@ def chat():
                          task=task,
                          participants=participant_names,
                          share_url=share_url,
-                         behavior_map=behavior_map)
+                         behavior_map=behavior_map,
+                         ai_enabled=room.get('ai_enabled', True))
 
 @socketio.on('connect')
 def handle_connect():
@@ -426,9 +429,9 @@ def handle_message(data):
             'room_id': room_id
         }
         
-        # Check if we should generate a response
+        # Check if AI is enabled for this room before processing
         # Use the pipeline to process the message with the user profile
-        if room['pipeline']:
+        if room['pipeline'] and room.get('ai_enabled', True):  # Default to True for backward compatibility
             response = room['pipeline'].process_message(message, user_profile_dict)
             
             # If there's a response, broadcast it to the room
@@ -689,7 +692,7 @@ def get_all_local_ips():
         return ["127.0.0.1"]  # Fallback to localhost
 
 if __name__ == '__main__':
-    port = 3000  # Use port 3000 which is less likely to be in use
+    port = 3001  # Use port 3000 which is less likely to be in use
     all_ips = get_all_local_ips()
     
     print("\n" + "="*50)
@@ -704,4 +707,4 @@ if __name__ == '__main__':
     print("="*50 + "\n")
     
     logger.info(f"App accessible on local network at multiple IPs: {', '.join(all_ips)}")
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)  # Set debug to False for better security 
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)  # Set debug to False for better security 

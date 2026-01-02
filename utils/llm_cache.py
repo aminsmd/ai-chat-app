@@ -3,7 +3,7 @@ import json
 from typing import List, Dict, Optional
 import hashlib
 from pathlib import Path
-from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain_community.cache import SQLiteCache
 from langchain.globals import set_llm_cache
 import sqlite3
@@ -25,9 +25,8 @@ class LLMCache:
         
         # Initialize ChatOpenAI
         self.chat = ChatOpenAI(
-            model_name="gpt-4",
-            temperature=0.7,
-            cache=SQLiteCache(database_path=str(self.cache_dir / "sqlite_cache.db"))
+            model="gpt-4",
+            temperature=0.7
         )
     
     def _get_cache_key(self, messages: List[Dict]) -> str:
@@ -82,22 +81,30 @@ class LLMCache:
                 with open(cache_file, 'r') as f:
                     return json.load(f)['response']
             
-            # Convert to LangChain messages format
-            langchain_messages = [
-                {"role": msg["role"], "content": msg["content"]} 
-                for msg in messages
-            ]
-            
             # Create chat model with specified parameters
-            chat = ChatOpenAI(
-                model_name="gpt-4",
-                temperature=temperature,
-                max_completion_tokens=max_tokens,
-                cache=SQLiteCache(database_path=str(self.cache_dir / "sqlite_cache.db"))
-            )
+            chat_kwargs = {
+                "model": "gpt-4",
+                "temperature": temperature
+            }
+            if max_tokens:
+                chat_kwargs["max_tokens"] = max_tokens
+            chat = ChatOpenAI(**chat_kwargs)
+            
+            # Convert messages to LangChain message format
+            from langchain.schema import HumanMessage, SystemMessage, AIMessage
+            langchain_message_objects = []
+            for msg in messages:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                if role == "user":
+                    langchain_message_objects.append(HumanMessage(content=content))
+                elif role == "assistant":
+                    langchain_message_objects.append(AIMessage(content=content))
+                elif role == "system":
+                    langchain_message_objects.append(SystemMessage(content=content))
             
             # Generate response
-            response = chat.invoke(langchain_messages).content
+            response = chat.invoke(langchain_message_objects).content
             
             # Cache response
             with open(cache_file, 'w') as f:

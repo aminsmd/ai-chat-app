@@ -1,0 +1,27 @@
+services:
+  web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trail-chat-web
+    ports:
+      - "3001:3001"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPEN_AI_MODEL=${OPEN_AI_MODEL:-gpt-4}
+      - SQLITE_DB_NAME=${SQLITE_DB_NAME:-chat_history.db}
+    volumes:
+      # Persist data directory for chat history
+      - ./data:/app/data
+      # Persist cache directory for AI responses and memory
+      - ./cache:/app/cache
+      # Persist config directory for personas
+      - ./config:/app/config
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s = socket.socket(); s.connect(('localhost', 3001)); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+

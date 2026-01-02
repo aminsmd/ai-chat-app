@@ -51,6 +51,9 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+        }
+
+        .chat-main.with-personality {
             border-right: 1px solid var(--border-color);
         }
 
@@ -639,6 +642,7 @@
     </div>
     
     <div class="chat-container">
+        {% if ai_enabled %}
         <div class="personality-panel">
             <div class="personality-header">
                 <span>AI Personality: {{ personality.name }}</span>
@@ -685,8 +689,9 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
         
-        <div class="chat-main">
+        <div class="chat-main {% if ai_enabled %}with-personality{% endif %}">
             <div class="chat-header">
                 <div class="header-info">
                     <h2>{{ room_name }}</h2>
@@ -726,6 +731,7 @@
     </div>
     
     <!-- Personality Edit Modal -->
+    {% if ai_enabled %}
     <div id="personalityModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal()">&times;</span>
@@ -1027,6 +1033,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
 
     <script>
         // Add a custom :contains selector polyfill similar to jQuery
@@ -1136,7 +1143,7 @@
                 // Clear input field
                 messageInput.value = '';
                 
-                // Add user's message to the UI immediately
+                // Add user's message to the UI immediately (optimistic update)
                 addMessage({
                     user: username,
                     text: message
@@ -1155,10 +1162,7 @@
         socket.on('connect', () => {
             console.log('Connected to server');
             socket.emit('join', roomId);
-            addMessage({
-                user: 'System',
-                text: 'Connected to server'
-            });
+            // Don't add "Connected to server" message here - server will send it
         });
 
         socket.on('connect_error', (error) => {
@@ -1186,15 +1190,52 @@
             });
         });
 
+        // Track if we've loaded history to prevent duplicates
+        let historyLoaded = false;
+        
+        // Handle conversation history when joining
+        socket.on('history', (historyMessages) => {
+            console.log('Received conversation history:', historyMessages.length, 'messages');
+            if (!historyLoaded) {
+                // Clear existing messages (from initial page load)
+                const messagesContainer = document.getElementById('messages');
+                messagesContainer.innerHTML = '';
+                
+                // Add all history messages
+                historyMessages.forEach(msg => {
+                    if (msg && msg.user && (msg.text || msg.text === '')) {
+                        addMessage(msg);
+                    }
+                });
+                
+                historyLoaded = true;
+                console.log('History loaded');
+            }
+        });
+        
         socket.on('message', (data) => {
             console.log('Received message:', data);
             
             // Ensure data has user and text properties
             if (data && data.user && (data.text || data.text === '')) {
-                // Don't add duplicate messages (since we already add user messages when sent)
-                if (data.user !== username || data.user === 'AI' || data.user === 'System') {
-                    addMessage(data);
+                // Skip if this is our own message that we already added optimistically
+                if (data.user === username) {
+                    // Check if this message is already in the DOM
+                    const messagesContainer = document.getElementById('messages');
+                    const existingMessages = Array.from(messagesContainer.querySelectorAll('.message'));
+                    const isDuplicate = existingMessages.some(msgEl => {
+                        const sender = msgEl.querySelector('.sender')?.textContent;
+                        const text = msgEl.querySelector('div:last-child')?.textContent;
+                        return sender === data.user && text === data.text;
+                    });
+                    
+                    if (isDuplicate) {
+                        console.log('Skipping duplicate message from self:', data);
+                        return;
+                    }
                 }
+                
+                addMessage(data);
             } else {
                 console.log("Received invalid message data:", data);
             }
@@ -1206,11 +1247,17 @@
 
         // Personality modal functions
         function openModal() {
-            document.getElementById('personalityModal').style.display = 'block';
+            const modal = document.getElementById('personalityModal');
+            if (modal) {
+                modal.style.display = 'block';
+            }
         }
         
         function closeModal() {
-            document.getElementById('personalityModal').style.display = 'none';
+            const modal = document.getElementById('personalityModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         }
         
         function updateValue(input) {
@@ -1401,41 +1448,8 @@
             }, 2000);
         }
 
-        // Load existing messages
-        fetch(`/api/rooms/${roomId}/messages`)
-            .then(response => response.json())
-            .then(messages => {
-                const container = document.getElementById('messages');
-                messages.forEach(msg => {
-                    // Skip messages with undefined user_id or content
-                    if (!msg.user_id || !msg.content) {
-                        console.log("Skipping message with undefined data:", msg);
-                        return;
-                    }
-                    
-                    const div = document.createElement('div');
-                    div.className = `message ${msg.role || 'assistant'}`;
-                    
-                    const senderDiv = document.createElement('div');
-                    senderDiv.className = 'sender';
-                    senderDiv.textContent = msg.user_id;
-                    
-                    const textDiv = document.createElement('div');
-                    textDiv.textContent = msg.content;
-                    
-                    div.appendChild(senderDiv);
-                    div.appendChild(textDiv);
-                    container.appendChild(div);
-                });
-                container.scrollTop = container.scrollHeight;
-            })
-            .catch(error => {
-                console.error("Error loading messages:", error);
-                addMessage({
-                    user: 'System',
-                    text: 'Error loading previous messages'
-                });
-            });
+        // Don't load messages via fetch - we'll get them via Socket.IO history event
+        // This prevents duplicates when someone joins
 
         // Behavior map functionality
         function toggleBehaviors(trait) {
