@@ -1,93 +1,131 @@
-# TRAIL: Team Research and AI Integration Lab
+# AI Chat App
 
-## Python VENV
-1. python version 3.11
-2. Steps:   
-    following tutorials in https://gist.github.com/ryumada/c22133988fd1c22a66e4ed1b23eca233   
-    pip install -r requirement_venv.txt
-
-
-## Tool information
-Tool : Visual Studio Code
-Extension: Remote Development
-
-## Commit Conventions
-### run pre-commit before commit files
-pre-commit run --all-files
-
-## Overview
-This project aims to build an AI chatbot that can interact effectively in a collaborative environment, contributing to research on human-like AI behavior. It provides both a Slack integration and a web interface for team collaboration with AI.
+AI-powered chat application with customizable personality traits and real-time collaboration features.
 
 ## Features
-- Multi-room chat support with persistent history
-- Customizable AI teammate personality traits
-- Long-term memory and context awareness
-- Real-time collaboration with multiple users
-- Shareable room links
 
-## How to Run
+- 🤖 **AI-Powered Conversations** - Integrated with OpenAI for intelligent responses
+- 🎭 **Personality Customization** - Adjust AI behavior, communication style, and traits
+- 👥 **Real-time Collaboration** - Multiple users can chat together in shared rooms
+- 🔄 **WebSocket Support** - Real-time message delivery using Flask-SocketIO
+- 💾 **Persistent Storage** - SQLite database for chat history and configurations
+- 🐳 **Docker Ready** - Easy deployment with Docker and docker-compose
 
-### Environment Setup
-1. Git clone this repo
-2. Create a `.env` file in the `Bolt` directory with the following variables:
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- OpenAI API key
+- Docker (optional, for containerized deployment)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/aminsmd/ai-chat-app.git
+   cd ai-chat-app
    ```
-   # Required for Slack integration
-   SLACK_APP_TOKEN=<your-slack-app-token>
-   SLACK_BOT_TOKEN=<your-slack-bot-token>
-   
-   # Required for both Slack and Web interface
-   OPENAI_API_KEY=<your-openai-api-key>
-   
-   # Optional configurations
-   OPEN_AI_MODEL=gpt-4
-   SQLITE_DB_NAME=chat_history.db
+
+2. **Create environment file**
+   ```bash
+   # Create .env file with your OpenAI API key
+   echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
+   echo "OPEN_AI_MODEL=gpt-4" >> .env
+   echo "SQLITE_DB_NAME=chat_history.db" >> .env
    ```
 
-### Run Slack ChatBot
-1. Follow the instructions to generate Slack API keys and add corresponding Scopes:
-   https://www.youtube.com/watch?v=oDoFvpDftBA&ab_channel=PyBites
-2. Add the Slack tokens to your `.env` file
-3. Run `python3 app.py` to start the Slack bot
+3. **Run with Docker (Recommended)**
+   ```bash
+   docker-compose up
+   ```
 
-### Run Web Interface
-1. Ensure you have the OpenAI API key in your `.env` file
-2. Navigate to the `Bolt` directory
-3. Run `python3 web_app.py`
-4. Access the web interface at `http://localhost:5000`
+   Access at: http://localhost:3001
 
-#### Web Interface Features
-- Create and join chat rooms
-- Real-time chat with AI teammate
-- Customize AI personality traits and communication style
-- Share room links with other users
-- Persistent chat history
-- Multiple active rooms support
+**OR**
 
-## How It Works
+3. **Run locally**
+   ```bash
+   pip install -r requirements-web-only.txt
+   python web_app.py
+   ```
 
-### Database Structure
-The application uses SQLite3 for data persistence with the following tables:
-- `users`: Stores user information and session data
-- `personas`: Stores AI personality configurations per room
-- `new_msg_queue`: Manages message queue for processing
-- `history`: Stores chat history
-- `context_history`: Maintains context for AI responses
-- `long_term_memories`: Stores summarized conversation insights
+## Configuration
 
-### AI Interaction
-- Uses OpenAI's GPT-4 model for natural language processing
-- Maintains conversation context and long-term memory
-- Adapts responses based on configured personality traits
-- Supports real-time updates to AI behavior through personality adjustments
+### Environment Variables
 
-## Possible Setup Issues and Solutions
-All package versions are listed in requirements.txt
-current chromadb version: 0.4.15
+Create a `.env` file with:
 
-1. When you create a new github Codespaces, you should install the packages manually.
-run <code> "pip install --no-cache-dir -r .devcontainer/requirements.txt"</code>
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+OPEN_AI_MODEL=gpt-4
+SQLITE_DB_NAME=chat_history.db
+```
 
-NOTE: It is not recommended to upload your API token to the codebase because the GIT and Slack will lock the privilege.
+### Personality Customization
+
+Customize the AI's personality through the web interface:
+
+- **Emotional Stability** - How calm vs. reactive
+- **Extraversion** - How outgoing vs. reserved
+- **Openness** - How creative vs. conventional
+- **Agreeableness** - How cooperative vs. competitive
+- **Conscientiousness** - How organized vs. spontaneous
+
+## Docker Deployment
+
+### Build and Run
+
+```bash
+# Run with docker-compose (easiest)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+### Rebuild After Changes
+
+```bash
+docker-compose up --build
+```
+
+See [DOCKER.md](DOCKER.md) for detailed Docker instructions.
+
+## Database Structure
+
+The application uses SQLite for data persistence:
+- `users`: User information and session data
+- `personas`: AI personality configurations per room
+- `new_msg_queue`: Message queue for processing
+- `history`: Chat history
+- `context_history`: Context for AI responses
+- `long_term_memories`: Summarized conversation insights
+
+## Tech Stack
+
+- **Backend**: Flask, Flask-SocketIO
+- **AI**: OpenAI API, LangChain
+- **Database**: SQLite, SQLAlchemy
+- **Frontend**: HTML, JavaScript, WebSocket
+- **Deployment**: Docker, docker-compose
+
+## Troubleshooting
+
+See [DOCKER.md](DOCKER.md) for common Docker issues.
+
+**Port Already in Use:**
+```bash
+docker run -p 8080:3001 --env-file .env ai-chat-app
+```
+
+**View Logs:**
+```bash
+docker logs -f trail-chat-web
+```
 
 ## Preprint paper:
 
