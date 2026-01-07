@@ -694,17 +694,36 @@ def get_all_local_ips():
 if __name__ == '__main__':
     port = 3001  # Use port 3000 which is less likely to be in use
     all_ips = get_all_local_ips()
-    
-    print("\n" + "="*50)
-    print("   TRAIL CHAT APP SERVER STARTED")
-    print("="*50)
-    print("\nApp accessible at the following URLs:")
-    print("-"*40)
-    for ip in all_ips:
-        print(f"  http://{ip}:{port}")
-    print("-"*40)
-    print("\nShare these URLs with devices on your local network")
-    print("="*50 + "\n")
-    
+
+    # Detect if running in Docker
+    is_docker = os.path.exists('/.dockerenv')
+
+    # Print startup banner to stdout (visible in docker logs)
+    print("\n" + "="*50, flush=True)
+    print("   TRAIL CHAT APP SERVER STARTED", flush=True)
+    print("="*50, flush=True)
+    print("\nApp accessible at the following URLs:", flush=True)
+    print("-"*40, flush=True)
+
+    if is_docker:
+        # In Docker, show the host machine's accessible URLs
+        print(f"  http://localhost:{port}", flush=True)
+
+        # Get host IP from environment variable
+        host_ip = os.environ.get('HOST_IP')
+
+        if host_ip:
+            print(f"  http://{host_ip}:{port} (accessible from local network)", flush=True)
+        else:
+            # Fallback: show instruction to find IP
+            print(f"  http://<host-machine-ip>:{port} (find IP with: ipconfig getifaddr en0)", flush=True)
+    else:
+        for ip in all_ips:
+            print(f"  http://{ip}:{port}", flush=True)
+
+    print("-"*40, flush=True)
+    print("\nShare these URLs with devices on your local network", flush=True)
+    print("="*50 + "\n", flush=True)
+
     logger.info(f"App accessible on local network at multiple IPs: {', '.join(all_ips)}")
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)  # Set debug to False for better security 

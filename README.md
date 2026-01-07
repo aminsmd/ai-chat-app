@@ -9,6 +9,7 @@ AI-powered chat application with customizable personality traits and real-time c
 - 👥 **Real-time Collaboration** - Multiple users can chat together in shared rooms
 - 🔄 **WebSocket Support** - Real-time message delivery using Flask-SocketIO
 - 💾 **Persistent Storage** - SQLite database for chat history and configurations
+- 🌐 **Network Access** - Access from any device on your local network
 - 🐳 **Docker Ready** - Easy deployment with Docker and docker-compose
 
 ## Quick Start
@@ -37,10 +38,16 @@ AI-powered chat application with customizable personality traits and real-time c
 
 3. **Run with Docker (Recommended)**
    ```bash
+   # Using the helper script (automatically detects your network IP)
+   ./start-docker.sh
+
+   # OR manually
    docker-compose up
    ```
 
-   Access at: http://localhost:3001
+   The app will display URLs on startup:
+   - `http://localhost:3001` - Access from your computer
+   - `http://<your-ip>:3001` - Access from other devices on your network
 
 **OR**
 
@@ -49,6 +56,8 @@ AI-powered chat application with customizable personality traits and real-time c
    pip install -r requirements.txt
    python web_app.py
    ```
+
+   The app will automatically detect and display all available network URLs on startup.
 
 ## Configuration
 
@@ -79,7 +88,10 @@ The personality configuration is stored in the database and applied during AI re
 ### Build and Run
 
 ```bash
-# Run with docker-compose (easiest)
+# Run with helper script (shows your network IP automatically)
+./start-docker.sh
+
+# OR run with docker-compose
 docker-compose up -d
 
 # View logs
@@ -88,6 +100,32 @@ docker-compose logs -f
 # Stop
 docker-compose down
 ```
+
+### Network Access
+
+The application is accessible from any device on your local network:
+
+1. **Using the helper script** - Run `./start-docker.sh` and it will automatically detect and display your network IP
+2. **Manual method** - Start with `HOST_IP=$(ipconfig getifaddr en0) docker-compose up`
+3. **Find your IP manually** - Run `ipconfig getifaddr en0` on macOS or `hostname -I` on Linux
+
+Once running, you'll see output like:
+```
+==================================================
+   TRAIL CHAT APP SERVER STARTED
+==================================================
+
+App accessible at the following URLs:
+----------------------------------------
+  http://localhost:3001
+  http://192.168.1.5:3001 (accessible from local network)
+----------------------------------------
+
+Share these URLs with devices on your local network
+==================================================
+```
+
+Share the network URL with other devices (phones, tablets, other computers) on your local network to collaborate in real-time!
 
 ### Rebuild After Changes
 

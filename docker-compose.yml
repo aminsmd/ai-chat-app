@@ -10,6 +10,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPEN_AI_MODEL=${OPEN_AI_MODEL:-gpt-4}
       - SQLITE_DB_NAME=${SQLITE_DB_NAME:-chat_history.db}
+      - HOST_IP=${HOST_IP}
     volumes:
       # Persist data directory for chat history
       - ./data:/app/data
