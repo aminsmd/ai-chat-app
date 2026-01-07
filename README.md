@@ -5,7 +5,7 @@ AI-powered chat application with customizable personality traits and real-time c
 ## Features
 
 - 🤖 **AI-Powered Conversations** - Integrated with OpenAI for intelligent responses
-- 🎭 **Personality Customization** - Adjust AI behavior, communication style, and traits
+- 🎭 **Configurable AI Personality** - Backend personality system for customizable AI behavior
 - 👥 **Real-time Collaboration** - Multiple users can chat together in shared rooms
 - 🔄 **WebSocket Support** - Real-time message delivery using Flask-SocketIO
 - 💾 **Persistent Storage** - SQLite database for chat history and configurations
@@ -46,7 +46,7 @@ AI-powered chat application with customizable personality traits and real-time c
 
 3. **Run locally**
    ```bash
-   pip install -r requirements-web-only.txt
+   pip install -r requirements.txt
    python web_app.py
    ```
 
@@ -62,15 +62,17 @@ OPEN_AI_MODEL=gpt-4
 SQLITE_DB_NAME=chat_history.db
 ```
 
-### Personality Customization
+### AI Personality System
 
-Customize the AI's personality through the web interface:
+The application includes a sophisticated personality system that influences AI behavior:
 
-- **Emotional Stability** - How calm vs. reactive
-- **Extraversion** - How outgoing vs. reserved
-- **Openness** - How creative vs. conventional
-- **Agreeableness** - How cooperative vs. competitive
-- **Conscientiousness** - How organized vs. spontaneous
+- **Emotional Stability** - Controls how calm vs. reactive the AI responds
+- **Extraversion** - Determines how outgoing vs. reserved the AI appears
+- **Openness** - Adjusts how creative vs. conventional the AI's suggestions are
+- **Agreeableness** - Influences how cooperative vs. competitive the AI is
+- **Conscientiousness** - Affects how organized vs. spontaneous the AI's responses are
+
+The personality configuration is stored in the database and applied during AI response generation. The UI sidebar for personality display has been simplified for a cleaner chat experience.
 
 ## Docker Deployment
 
